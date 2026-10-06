@@ -125,6 +125,23 @@ volver a cifrar cada token de cada buzón.
 
 ---
 
+## Primer dueño (arranque)
+
+Un usuario nuevo se crea solo al iniciar sesión, pero **no pertenece a ningún
+espacio de trabajo** hasta que alguien lo invita — y la primera invitación no
+la puede hacer nadie porque aún no hay dueño. Ese arranque se resuelve una
+sola vez con un script:
+
+1. El primer usuario inicia sesión una vez (eso crea su cuenta).
+2. Se le nombra dueño de un espacio nuevo:
+
+   ```bash
+   python scripts/sembrar_tenant.py --email tu@correo.com --nombre "Mi Empresa"
+   ```
+
+Desde ahí, ese dueño gestiona el resto de membresías desde la aplicación. El
+script es idempotente y sirve también para promover a un usuario existente.
+
 ## Orden de despliegue
 
 Las migraciones van **antes** que el código nuevo, y deben ser compatibles
@@ -249,6 +266,7 @@ scrape_configs:
       propietario**; verificado con los tests de integración contra el
       entorno real
 - [ ] Migraciones aplicadas con el rol propietario
+- [ ] Primer dueño sembrado con `scripts/sembrar_tenant.py` tras su primer inicio de sesión
 - [ ] Gmail: decidido el camino — modo *Testing* (añadir los test users; avisar del vencimiento semanal) o verificación CASA iniciada. Outlook no necesita ninguno
 - [ ] `KMS_PROVIDER` distinto de `local` y clave maestra en el KMS
 - [ ] `METRICS_TOKEN` definido y cargado en Prometheus
