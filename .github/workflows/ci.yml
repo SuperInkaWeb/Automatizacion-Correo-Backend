@@ -84,10 +84,17 @@ jobs:
       # Secretos filtrados en cualquier punto del historial, no solo en
       # el ultimo commit: una clave borrada despues sigue estando
       # comprometida y es recuperable.
+      #
+      # Se usa el gitleaks CLI por Docker y no la accion oficial porque
+      # esta exige una licencia (GITLEAKS_LICENSE) en repos de una
+      # organizacion. La herramienta es libre; solo el envoltorio de
+      # Action pone ese muro. El CLI da la misma proteccion sin licencia.
+      # `detect` recorre el historial de git (de ahi el fetch-depth: 0 del
+      # checkout) y sale con codigo distinto de cero si encuentra algo.
       - name: Buscar secretos en el historial
-        uses: gitleaks/gitleaks-action@v2.3.9
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          docker run --rm -v "$PWD:/repo" ghcr.io/gitleaks/gitleaks:latest \
+            detect --source=/repo --redact --verbose
 
   tests:
     name: Tests unitarios y de seguridad
