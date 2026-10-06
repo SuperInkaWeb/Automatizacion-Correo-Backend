@@ -7,8 +7,10 @@ que hay que resolverlo.
 
 ## Bloqueantes
 
-Dos cosas no las puede arreglar el código y hay que hacerlas a mano. Sin
-ellas el sistema arranca y parece funcionar, que es justamente el problema.
+Dos cosas no las puede arreglar el código y hay que hacerlas a mano. La
+primera es un bloqueante duro: sin ella el sistema arranca y *parece*
+funcionar, que es justamente el problema. La segunda es una decisión con
+compromisos, que admite un camino intermedio para empezar ya.
 
 ### 1. El rol de la base de datos no puede ser propietario
 
@@ -45,20 +47,44 @@ Si el rol es propietario o tiene `BYPASSRLS`, fallan con un mensaje que lo
 dice. Es la única comprobación que distingue «RLS configurado» de «RLS
 funcionando».
 
-### 2. Verificación CASA para el scope restringido de Gmail
+### 2. Gmail: modo prueba ahora, verificación CASA después
 
-**Por qué es bloqueante.** `gmail.readonly` es un *restricted scope*. Sin la
-verificación de Google, la aplicación queda limitada a 100 usuarios de
-prueba y muestra la pantalla de app no verificada. En producción eso
-significa que los usuarios reales no pueden vincular su buzón.
+`gmail.readonly` es un *restricted scope*. Google ofrece dos caminos, y el
+código funciona igual en los dos —la diferencia es solo del lado de Google—,
+así que esto no bloquea el despliegue mientras se asuman los límites del
+primero.
 
-**Qué hacer.** Iniciar la verificación en Google Cloud Console (OAuth
-consent screen → publicar) y la evaluación de seguridad CASA. El plazo
-habitual es de semanas, no de días: **empezarlo antes de tener fecha de
-lanzamiento.**
+**Camino elegido para empezar: publishing status = "Testing".** Se deja la
+pantalla de consentimiento en estado *Testing* y se añaden los correos que
+van a conectarse como *test users*. Permite operar en producción sin esperar
+la verificación. Sus límites, que hay que conocer antes de ponerlo delante
+de nadie:
 
-Microsoft Graph (`Mail.Read`) no requiere un proceso equivalente, así que un
-lanzamiento con solo Outlook no está bloqueado por esto.
+- **Máximo 100 usuarios de prueba**, y cada uno hay que añadirlo a mano en la
+  consola.
+- El usuario ve una **pantalla de "app no verificada"** al conectar, y tiene
+  que pulsar "Avanzado → continuar". No es un error, pero asusta a quien no
+  lo espera.
+- **El refresh token caduca a los 7 días.** Es la trampa importante: es un
+  comportamiento documentado de Google para las apps en *Testing*. En la
+  práctica significa que **cada buzón conectado se desconecta solo cada
+  semana** y el usuario tiene que volver a vincularlo.
+
+  El código ya lo maneja sin romperse: cuando el refresh falla, la conexión
+  se marca como revocada y la interfaz pide reconectar, en vez de reintentar
+  en bucle. No hay pérdida de datos ni error silencioso. Pero la experiencia
+  es esa, y hay que avisar a los usuarios de prueba.
+
+**Camino para producción de verdad: verificación.** Publicar la pantalla de
+consentimiento (publishing status → *In production*) e iniciar la evaluación
+CASA. Quita los tres límites de arriba, incluido el vencimiento semanal. El
+plazo habitual es de semanas, así que conviene **iniciarlo en paralelo**
+desde el primer día aunque se empiece en modo prueba: no cuesta nada tenerlo
+en marcha mientras se opera con usuarios de prueba.
+
+**Outlook no tiene nada de esto.** Microsoft Graph (`Mail.Read`) no exige un
+proceso equivalente ni caduca el refresh token a los 7 días, así que para una
+prueba estable con usuarios reales desde ya, es el camino más cómodo.
 
 ---
 
@@ -223,7 +249,7 @@ scrape_configs:
       propietario**; verificado con los tests de integración contra el
       entorno real
 - [ ] Migraciones aplicadas con el rol propietario
-- [ ] Verificación CASA de Google iniciada (si se usa Gmail)
+- [ ] Gmail: decidido el camino — modo *Testing* (añadir los test users; avisar del vencimiento semanal) o verificación CASA iniciada. Outlook no necesita ninguno
 - [ ] `KMS_PROVIDER` distinto de `local` y clave maestra en el KMS
 - [ ] `METRICS_TOKEN` definido y cargado en Prometheus
 - [ ] `CORS_ORIGINS` con el dominio real, en `https`
