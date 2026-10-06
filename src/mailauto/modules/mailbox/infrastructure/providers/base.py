@@ -47,7 +47,10 @@ from mailauto.modules.mailbox.domain.entities import (
 from mailauto.modules.mailbox.domain.ports import ProveedorOAuth
 from mailauto.shared.errors import CredencialesRevocadas, ErrorDeProveedor
 from mailauto.shared.observability import metricas
+from mailauto.shared.observability.logging import obtener_logger
 from mailauto.shared.types import ahora_utc
+
+logger = obtener_logger(__name__)
 
 TIMEOUT_SEGUNDOS = 15.0
 _BYTES_DE_ENTROPIA_STATE = 32  # 256 bits
@@ -153,11 +156,18 @@ class ProveedorOAuthBase(ProveedorOAuth):
                     data={"token": token, "client_id": self._client_id},
                     headers={"Content-Type": "application/x-www-form-urlencoded"},
                 )
-        except httpx.HTTPError:
+        except httpx.HTTPError as exc:
             # Un fallo al revocar no debe impedir el borrado local: el
-            # usuario pidio desvincular y eso tiene que ocurrir. Se registra
-            # para reintentarlo desde el cron.
-            pass
+            # usuario pidio desvincular y eso tiene que ocurrir. Pero no se
+            # traga en silencio: se registra para que un operador vea que
+            # un permiso pudo quedar vivo en el proveedor. No se reintenta
+            # —el token no revocado caduca por su cuenta— y no se registra
+            # el token en si, solo el hecho y el proveedor.
+            logger.warning(
+                "revocacion_fallida",
+                proveedor=self.nombre.value,
+                error=type(exc).__name__,
+            )
 
     # ── Infraestructura interna ──────────────────────────────────────
 
