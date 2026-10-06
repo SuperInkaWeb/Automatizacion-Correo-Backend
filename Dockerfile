@@ -74,9 +74,14 @@ EXPOSE 8000
 # contenedor cuando la sonda falla, y no se quiere reiniciar la API
 # porque PostgreSQL este temporalmente caido.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD curl -fsS http://localhost:8000/health/live || exit 1
+    CMD curl -fsS "http://localhost:${PORT:-8000}/health/live" || exit 1
 
-CMD ["uvicorn", "mailauto.bootstrap.app:crear_app", \
-     "--factory", "--host", "0.0.0.0", "--port", "8000", \
-     "--proxy-headers", "--forwarded-allow-ips", "*", \
-     "--no-server-header"]
+# Se liga a ${PORT:-8000}: en local y en compose la variable no existe y
+# vale 8000; las plataformas que asignan un puerto dinamico (Railway,
+# Render, Cloud Run) lo inyectan en PORT y el contenedor se liga a el sin
+# tocar nada. `sh -c exec` es necesario para expandir la variable, y el
+# `exec` deja a uvicorn como PID 1 para que reciba SIGTERM y apague limpio.
+CMD ["sh", "-c", \
+     "exec uvicorn mailauto.bootstrap.app:crear_app --factory \
+      --host 0.0.0.0 --port ${PORT:-8000} \
+      --proxy-headers --forwarded-allow-ips '*' --no-server-header"]
