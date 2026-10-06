@@ -39,7 +39,15 @@ jobs:
     name: Verificacion estatica
     runs-on: ubuntu-latest
     steps:
+      # `fetch-depth: 0` trae el historial completo. Gitleaks escanea un
+      # rango de commits (commit-base..HEAD), y con el clon superficial por
+      # defecto el padre del rango no esta presente: `git log` escribe un
+      # aviso a stderr y gitleaks lo toma por un fallo de escaneo. Solo se
+      # nota cuando el push trae mas de un commit, que es cuando el rango
+      # llega mas atras que la profundidad por defecto.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
