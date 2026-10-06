@@ -84,7 +84,15 @@ class Settings(BaseSettings):
     # Clave maestra (KEK) en base64. En produccion debe venir de un KMS o
     # gestor de secretos, nunca de un fichero en disco.
     master_key_b64: str
-    kms_provider: str = "local"  # local | aws | vault
+    # Solo `local` esta implementado: la clave maestra sale de
+    # MASTER_KEY_B64. `aws` y `vault` son trabajo futuro y el arranque los
+    # rechaza en vez de fingir que cifra con un KMS inexistente.
+    kms_provider: str = "local"  # local (implementado) | aws | vault (pendientes)
+    # Reconocimiento explicito para usar la clave local en produccion. Sin
+    # un KMS real, la clave vive en un secreto del entorno (Railway,
+    # Cloudflare, etc.): aceptable para empezar, pero es una decision
+    # consciente, no un descuido. Por eso hay que activarlo a mano.
+    kms_local_en_produccion_aceptado: bool = False
 
     # ── OAuth de proveedores de correo ───────────────────────────────
     google_client_id: str | None = None
@@ -229,8 +237,18 @@ class Settings(BaseSettings):
             problemas.append("DOCS_ENABLED debe ser false: /docs expone el mapa de la API")
         if self.db_echo:
             problemas.append("DB_ECHO debe ser false: vuelca SQL con datos al log")
-        if self.kms_provider == "local":
-            problemas.append("KMS_PROVIDER='local' no es admisible; usar 'aws' o 'vault'")
+        if self.kms_provider in ("aws", "vault"):
+            problemas.append(
+                f"KMS_PROVIDER={self.kms_provider!r} todavia no esta implementado: el "
+                "codigo seguiria usando la clave local. Usa 'local' con "
+                "KMS_LOCAL_EN_PRODUCCION_ACEPTADO=true, o implementa el adaptador."
+            )
+        elif self.kms_provider == "local" and not self.kms_local_en_produccion_aceptado:
+            problemas.append(
+                "KMS_PROVIDER='local' en produccion exige aceptar el compromiso: la "
+                "clave maestra vivira en un secreto del entorno, no en un KMS gestionado. "
+                "Si lo asumes, pon KMS_LOCAL_EN_PRODUCCION_ACEPTADO=true."
+            )
         if not self.oauth_redirect_uris:
             problemas.append("OAUTH_REDIRECT_URIS no puede estar vacio")
         if any("localhost" in u or "127.0.0.1" in u for u in self.oauth_redirect_uris):

@@ -28,7 +28,8 @@ from tests.conftest import ajustes_de_pruebas
 def _ajustes_de_produccion(**extra: Any) -> Settings:  # noqa: ANN401 - campos de configuracion heterogeneos
     propios: dict[str, Any] = {
         "environment": "production",
-        "kms_provider": "aws",
+        "kms_provider": "local",
+        "kms_local_en_produccion_aceptado": True,
         "docs_enabled": False,
         "cors_origins": ["https://app.ejemplo.com"],
         "oauth_redirect_uris": ["https://app.ejemplo.com/oauth/callback"],

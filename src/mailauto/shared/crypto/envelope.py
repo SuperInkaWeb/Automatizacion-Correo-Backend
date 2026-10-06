@@ -79,10 +79,15 @@ class ProveedorDeClaveMaestra(ABC):
 
 class ClaveMaestraLocal(ProveedorDeClaveMaestra):
     """
-    KEK desde configuracion. Solo para desarrollo y pruebas.
+    KEK desde configuracion (`MASTER_KEY_B64`).
 
-    `Settings` prohibe `KMS_PROVIDER='local'` en produccion precisamente
-    para que este adaptador no llegue nunca a un entorno con datos reales.
+    Es el unico proveedor implementado. En produccion `Settings` solo deja
+    usarlo si el operador acepta el compromiso de forma explicita
+    (`KMS_LOCAL_EN_PRODUCCION_ACEPTADO=true`): sin un KMS gestionado, la
+    clave vive en un secreto del entorno, lo que es aceptable para empezar
+    pero debe ser una decision consciente. Los adaptadores `aws`/`vault`
+    quedan como trabajo futuro; mientras no existan, el arranque los
+    rechaza en lugar de usar esta clave fingiendo que es un KMS.
     """
 
     def __init__(self, clave: bytes, version: int = 1) -> None:
