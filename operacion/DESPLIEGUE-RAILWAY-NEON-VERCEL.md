@@ -97,7 +97,7 @@ Con eso llenas en el backend:
 ## 3. Railway (API, workers y Redis)
 
 Railway despliega varios servicios desde el mismo repositorio. Conecta el
-repo `automatizacion-correos-backend` y crea **cuatro** servicios:
+repo `Automatizacion-Correo-Backend` y crea **cuatro** servicios:
 
 ### a) Redis
 Railway → **New → Database → Redis**. Te da una variable `REDIS_URL`.
@@ -155,7 +155,7 @@ Cuando el servicio `api` esté desplegado, Railway le da una URL pública
 
 ## 4. Vercel (interfaz)
 
-1. Importa el repo `automatizacion-correos-frontend`. Vercel detecta Next.js
+1. Importa el repo `Automatizacion-Correo-Frontend`. Vercel detecta Next.js
    solo; no uses el Dockerfile.
 2. Variables de entorno:
 
