@@ -88,11 +88,48 @@ def test_reconoce_la_constancia_aunque_el_ocr_la_destroce(
     assert perfil.reconoce(DOCUMENTO_DEGRADADO)
 
 
+# Formatos REALES que no decian "constancia de pago" ni "primera
+# categoria": antes quedaban en una sola señal ("1683") y se descartaban.
+_FORMATO_SOL = """\
+Identificacion de la Transaccion:
+Numero de Formulario: 1683
+Datos Generales:
+RUC: 10071840871
+Periodo: 202510
+Tributo: 3011 - Impuesto a la Renta de 1ra Categoria
+Monto de Alquiler: S/ 6,500.00
+Importe Pagado: S/ 329.00
+"""
+
+_FORMATO_BANCO_NACION = """\
+BANCO DE LA NACION
+Impuesto a la Renta 1ra.Categoria - Form 1683
+RUC del arrendador : 10195656784  Periodo : 05/2026
+Importe pagado : S/ 425.00
+"""
+
+
+@pytest.mark.parametrize("texto", [_FORMATO_SOL, _FORMATO_BANCO_NACION])
+def test_reconoce_los_formatos_reales_de_sunat(
+    perfil: PerfilSunatArrendamiento, texto: str
+) -> None:
+    """
+    Regresion: SUNAT SOL y el Banco de la Nacion escriben "1ra Categoria"
+    (no "primera categoria") e identifican el tributo por su codigo 3011.
+    Sin reconocer esas variantes, el pipeline los descartaba y un correo
+    con cuatro recibos de estos solo producia un registro.
+    """
+    assert perfil.reconoce(texto)
+
+
 @pytest.mark.parametrize(
     "texto",
     [
         "Factura de electricidad del mes de marzo",
-        "SUNAT le informa sobre su clave SOL",  # una sola señal: no basta
+        "SUNAT le informa sobre su clave SOL",
+        # Otra categoria de renta: comparte "impuesto a la renta" pero no
+        # es arrendamiento (ni 1683, ni 3011, ni 1ra categoria).
+        "Impuesto a la Renta de 3ra Categoria - Formulario 1662",
         "",
     ],
 )

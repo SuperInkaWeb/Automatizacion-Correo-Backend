@@ -219,15 +219,26 @@ _VALIDADORES: Final = {
 _PENALIZACION_SIN_VALIDAR: Final = 0.45
 
 # Señales de que el documento es una constancia de arrendamiento. Se
-# exigen dos: "sunat" aparece en cualquier correo de la entidad y
-# bastaria por si sola para aceptar un documento que no es el buscado.
+# exigen dos: "1683" por si solo aparece en cualquier correo de la
+# entidad y bastaria para aceptar un documento que no es el buscado.
+#
+# Se cubren las variantes REALES que emiten SUNAT SOL ("Identificacion de
+# la Transaccion"), el Banco de la Nacion y pagalo.pe. Estas no dicen
+# "primera categoria" sino "1ra Categoria", y no repiten "constancia de
+# pago"; identifican el tributo por su nombre ("impuesto a la renta") o
+# por su codigo (3011 = renta de 1ra categoria). Sin estas señales, esos
+# formatos quedaban en una sola coincidencia (solo "1683") y el pipeline
+# los descartaba por completo en vez de extraerlos.
 _SEÑALES: Final[tuple[re.Pattern[str], ...]] = tuple(
     re.compile(p, re.IGNORECASE)
     for p in (
         _tolerante("arrendamiento"),
         r"\b1683\b",
+        r"\b3011\b",  # codigo del tributo "renta de 1ra categoria"
+        _tolerante("impuesto a la renta"),
         _tolerante("constancia de pago"),
         _tolerante("primera categoria"),
+        r"1ra\s*\.?\s*categor",  # "1ra Categoria", "1RA. CATEGOR."
         _tolerante("recibo por arrendamiento"),
         _tolerante("renta de primera"),
     )
