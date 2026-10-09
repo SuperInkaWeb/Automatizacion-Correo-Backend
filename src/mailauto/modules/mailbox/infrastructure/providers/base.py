@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import json
 import secrets
 from abc import abstractmethod
 from datetime import timedelta
@@ -72,6 +73,28 @@ def generar_pkce() -> tuple[str, str]:
     return verifier, challenge
 
 
+def _correo_desde_id_token(id_token: str | None) -> str | None:
+    """
+    Lee el correo del payload de un id_token (JWT) sin verificar la firma.
+
+    El id_token llega por el canal trasero directo del endpoint de token
+    sobre TLS, en respuesta a una peticion autenticada con el client
+    secret: para un dato puramente informativo como el correo a mostrar en
+    la UI, reverificar la firma no añade garantia. No se usa para tomar
+    ninguna decision de seguridad.
+    """
+    if not id_token:
+        return None
+    try:
+        payload_b64 = id_token.split(".")[1]
+        relleno = "=" * (-len(payload_b64) % 4)
+        datos = json.loads(base64.urlsafe_b64decode(payload_b64 + relleno))
+    except (ValueError, IndexError):
+        return None
+    correo = datos.get("email") or datos.get("preferred_username")
+    return str(correo) if correo else None
+
+
 class ProveedorOAuthBase(ProveedorOAuth):
     """Implementa el flujo comun; las subclases aportan endpoints y matices."""
 
@@ -98,8 +121,14 @@ class ProveedorOAuthBase(ProveedorOAuth):
         """Parametros propios del proveedor (p.ej. `access_type` en Google)."""
 
     @abstractmethod
-    async def _resolver_correo(self, access_token: str) -> str | None:
-        """Obtiene el correo del buzon vinculado, para mostrarlo en la UI."""
+    async def _resolver_correo(self, respuesta: dict[str, Any]) -> str | None:
+        """
+        Obtiene el correo del buzon vinculado, para mostrarlo en la UI.
+
+        Recibe la respuesta completa del endpoint de token (no solo el
+        access token) porque algunos proveedores lo traen ya en el
+        `id_token` y evitan asi una llamada —y un permiso— de mas.
+        """
 
     # ── Flujo comun ──────────────────────────────────────────────────
 
@@ -135,7 +164,7 @@ class ProveedorOAuthBase(ProveedorOAuth):
             "code_verifier": code_verifier,
         }
         respuesta = await self._pedir_token(datos)
-        correo = await self._resolver_correo(respuesta["access_token"])
+        correo = await self._resolver_correo(respuesta)
         return self._normalizar(respuesta, correo)
 
     async def refrescar(self, refresh_token: str) -> TokensDelProveedor:
@@ -291,9 +320,9 @@ class ProveedorGoogle(ProveedorOAuthBase):
             "include_granted_scopes": "false",
         }
 
-    async def _resolver_correo(self, access_token: str) -> str | None:
+    async def _resolver_correo(self, respuesta: dict[str, Any]) -> str | None:
         perfil = await self._consultar_perfil(
-            "https://www.googleapis.com/oauth2/v3/userinfo", access_token
+            "https://www.googleapis.com/oauth2/v3/userinfo", respuesta["access_token"]
         )
         correo = perfil.get("email")
         return str(correo) if correo else None
@@ -328,10 +357,9 @@ class ProveedorMicrosoft(ProveedorOAuthBase):
     def _parametros_extra_de_autorizacion(self) -> dict[str, str]:
         return {"response_mode": "query", "prompt": "select_account"}
 
-    async def _resolver_correo(self, access_token: str) -> str | None:
-        perfil = await self._consultar_perfil(
-            "https://graph.microsoft.com/v1.0/me?$select=mail,userPrincipalName",
-            access_token,
-        )
-        correo = perfil.get("mail") or perfil.get("userPrincipalName")
-        return str(correo) if correo else None
+    async def _resolver_correo(self, respuesta: dict[str, Any]) -> str | None:
+        # El correo sale del id_token (scope `openid`), no de Graph `/me`:
+        # esa llamada exige el permiso `User.Read`, que no se necesita para
+        # nada mas. Pedirlo solo para rotular la cuenta en la UI violaria el
+        # minimo privilegio y ampliaria el daño de un token comprometido.
+        return _correo_desde_id_token(respuesta.get("id_token"))
