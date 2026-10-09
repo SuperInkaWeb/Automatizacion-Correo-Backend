@@ -247,6 +247,12 @@ class RepositorioDeIngestaPostgres(RepositorioDeIngesta):
                 for fila in filas
             }
 
+    async def clave_de_adjunto(self, ctx: TenantContext, adjunto_id: UUID) -> str | None:
+        async with self._sesiones.sesion_de_tenant(ctx) as sesion:
+            return await sesion.scalar(
+                select(AdjuntoORM.clave_de_almacenamiento).where(AdjuntoORM.id == adjunto_id)
+            )
+
     # ── Errores ──────────────────────────────────────────────────────
 
     async def guardar_errores(self, tenant_id: UUID, errores: list[ErrorDeProcesamiento]) -> None:

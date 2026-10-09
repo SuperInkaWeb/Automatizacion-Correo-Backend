@@ -224,6 +224,12 @@ class RegistroSalida(BaseModel):
         )
 
 
+class DocumentoDeAdjuntoSalida(BaseModel):
+    """URL prefirmada para ver el adjunto original. Caduca pronto."""
+
+    url: str
+
+
 class CorreccionEntrada(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

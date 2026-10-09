@@ -26,6 +26,7 @@ from fastapi import APIRouter, Query, Response, status
 from mailauto.api.deps import ContenedorDep, ContextoDep, PaginacionDep
 from mailauto.api.schemas.comunes import (
     CorreccionEntrada,
+    DocumentoDeAdjuntoSalida,
     ExportacionSalida,
     MetaDePagina,
     RegistroSalida,
@@ -86,6 +87,22 @@ async def obtener_registro(
     registro = await contenedor.consultar_registros.obtener(contexto, registro_id)
     data = await _con_origen(contenedor, contexto, [registro])
     return Respuesta(data=data[0])
+
+
+@router.get("/records/{registro_id}/document", response_model=Respuesta[DocumentoDeAdjuntoSalida])
+async def ver_documento(
+    registro_id: UUID, contexto: ContextoDep, contenedor: ContenedorDep
+) -> Respuesta[DocumentoDeAdjuntoSalida]:
+    """
+    URL prefirmada de vida corta para ver el adjunto original.
+
+    Se verifica primero que el registro es del tenant (y existe) antes de
+    firmar nada: asi el identificador del adjunto no sirve para sondear
+    documentos ajenos.
+    """
+    registro = await contenedor.consultar_registros.obtener(contexto, registro_id)
+    url = await contenedor.obtener_url_de_adjunto.ejecutar(contexto, registro.adjunto_id)
+    return Respuesta(data=DocumentoDeAdjuntoSalida(url=url))
 
 
 # ── Revision humana ──────────────────────────────────────────────────

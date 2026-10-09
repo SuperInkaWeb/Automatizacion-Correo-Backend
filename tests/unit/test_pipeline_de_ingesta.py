@@ -111,6 +111,9 @@ class RepositorioFalso(RepositorioDeIngesta):
     ) -> dict[UUID, OrigenDeAdjunto]:
         return {}
 
+    async def clave_de_adjunto(self, ctx: TenantContext, adjunto_id: UUID) -> str | None:
+        return None
+
     async def guardar_errores(self, tenant_id: UUID, errores: list[ErrorDeProcesamiento]) -> None:
         self.errores.extend(errores)
 

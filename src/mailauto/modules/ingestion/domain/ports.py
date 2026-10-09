@@ -330,6 +330,16 @@ class RepositorioDeIngesta(ABC):
         pagina entera, y una consulta por adjunto seria el N+1 de siempre.
         """
 
+    @abstractmethod
+    async def clave_de_adjunto(self, ctx: TenantContext, adjunto_id: UUID) -> str | None:
+        """
+        Clave de almacenamiento de un adjunto, para firmar su descarga.
+
+        Devuelve None si el adjunto no existe o no es de este tenant (RLS
+        ya lo acota). La clave nunca sale al cliente: solo se usa para
+        pedir al almacen una URL prefirmada de vida corta.
+        """
+
     # Errores
     @abstractmethod
     async def guardar_errores(

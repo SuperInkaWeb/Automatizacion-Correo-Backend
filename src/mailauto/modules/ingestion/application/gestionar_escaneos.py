@@ -33,6 +33,7 @@ from mailauto.modules.ingestion.domain.entities import (
     TrabajoDeEscaneo,
 )
 from mailauto.modules.ingestion.domain.ports import (
+    AlmacenDeObjetos,
     ColaDeTrabajos,
     OrigenDeAdjunto,
     RepositorioDeIngesta,
@@ -171,3 +172,32 @@ class ConsultarOrigenDeAdjuntos:
     ) -> dict[UUID, OrigenDeAdjunto]:
         ctx.exigir(Permiso.RECORD_READ)
         return await self._repositorio.origen_de_adjuntos(ctx, adjunto_ids)
+
+
+class ObtenerUrlDeAdjunto:
+    """
+    URL prefirmada de vida corta para ver el documento original.
+
+    La usa la UI de revision y de registros: quien corrige un campo
+    necesita mirar el adjunto, no adivinar. La clave de almacenamiento no
+    sale nunca al cliente; solo la URL firmada, que caduca pronto porque
+    lleva datos tributarios y suele acabar pegada en un chat.
+    """
+
+    def __init__(
+        self,
+        repositorio: RepositorioDeIngesta,
+        almacen: AlmacenDeObjetos,
+        *,
+        ttl_segundos: int,
+    ) -> None:
+        self._repositorio = repositorio
+        self._almacen = almacen
+        self._ttl = ttl_segundos
+
+    async def ejecutar(self, ctx: TenantContext, adjunto_id: UUID) -> str:
+        ctx.exigir(Permiso.RECORD_READ)
+        clave = await self._repositorio.clave_de_adjunto(ctx, adjunto_id)
+        if clave is None:
+            raise RecursoNoEncontrado("El documento no existe.")
+        return await self._almacen.url_de_descarga(clave, ttl_segundos=self._ttl)

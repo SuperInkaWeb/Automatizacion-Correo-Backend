@@ -75,6 +75,7 @@ from mailauto.modules.ingestion.application.gestionar_escaneos import (
     ConsultarEscaneo,
     ConsultarOrigenDeAdjuntos,
     IniciarEscaneo,
+    ObtenerUrlDeAdjunto,
 )
 from mailauto.modules.ingestion.domain.ports import ProveedorDeCorreo
 from mailauto.modules.ingestion.infrastructure.almacen_s3 import AlmacenDeObjetosS3
@@ -155,6 +156,7 @@ class Contenedor:
     cancelar_escaneo: CancelarEscaneo
     consultar_escaneo: ConsultarEscaneo
     consultar_origen_de_adjuntos: ConsultarOrigenDeAdjuntos
+    obtener_url_de_adjunto: ObtenerUrlDeAdjunto
     ejecutar_escaneo: EjecutarEscaneo
     extraer_documento: ExtraerDocumento
     consultar_registros: ConsultarRegistros
@@ -308,6 +310,9 @@ async def construir_contenedor(settings: Settings) -> Contenedor:
         cancelar_escaneo=CancelarEscaneo(repo_ingesta, cola),
         consultar_escaneo=ConsultarEscaneo(repo_ingesta),
         consultar_origen_de_adjuntos=ConsultarOrigenDeAdjuntos(repo_ingesta),
+        obtener_url_de_adjunto=ObtenerUrlDeAdjunto(
+            repo_ingesta, almacen, ttl_segundos=settings.storage_presign_ttl_seconds
+        ),
         ejecutar_escaneo=EjecutarEscaneo(
             repositorio=repo_ingesta,
             credenciales=AdaptadorDeCredenciales(obtener_token),

@@ -127,6 +127,20 @@
         "title": "CorreccionEntrada",
         "type": "object"
       },
+      "DocumentoDeAdjuntoSalida": {
+        "description": "URL prefirmada para ver el adjunto original. Caduca pronto.",
+        "properties": {
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "DocumentoDeAdjuntoSalida",
+        "type": "object"
+      },
       "EntradaDeAuditoriaSalida": {
         "properties": {
           "accion": {
@@ -784,6 +798,33 @@
           "data"
         ],
         "title": "Respuesta[BuzonSalida]",
+        "type": "object"
+      },
+      "Respuesta_DocumentoDeAdjuntoSalida_": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/DocumentoDeAdjuntoSalida"
+          },
+          "meta": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MetaDePagina"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "default": "ok",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "Respuesta[DocumentoDeAdjuntoSalida]",
         "type": "object"
       },
       "Respuesta_EscaneoSalida_": {
@@ -2084,6 +2125,82 @@
           }
         },
         "summary": "Aprobar Registro",
+        "tags": [
+          "registros"
+        ]
+      }
+    },
+    "/api/v1/records/{registro_id}/document": {
+      "get": {
+        "description": "URL prefirmada de vida corta para ver el adjunto original.\n\nSe verifica primero que el registro es del tenant (y existe) antes de\nfirmar nada: asi el identificador del adjunto no sirve para sondear\ndocumentos ajenos.",
+        "operationId": "registros_ver_documento",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "registro_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Registro Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-tenant-id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Tenant-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Respuesta_DocumentoDeAdjuntoSalida_"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ver Documento",
         "tags": [
           "registros"
         ]
