@@ -101,9 +101,17 @@ class ConexionDeBuzon:
         """
         requeridos = set(ALCANCES_MINIMOS[self.proveedor])
         concedidos = set(self.alcances_concedidos)
-        # `openid` y `email` suelen devolverse con forma distinta segun el
-        # proveedor; lo que importa es el alcance de lectura de correo.
-        alcance_de_correo = {a for a in requeridos if "mail" in a.lower()}
+        # Solo se exige el alcance de LECTURA de correo. Los de identidad
+        # (openid, email) cada proveedor los devuelve con una forma distinta
+        # —Google entrega "email" como ".../userinfo.email"— asi que no
+        # deben entrar en la comprobacion. El alcance de lectura es el unico
+        # que contiene a la vez "mail" y "read" (gmail.readonly, Mail.Read),
+        # lo que lo distingue del scope de identidad "email" (que contiene
+        # "mail" pero no "read") y evita un falso negativo que bloqueaba la
+        # vinculacion de Gmail pese a haberse concedido el permiso.
+        alcance_de_correo = {
+            a for a in requeridos if "mail" in a.lower() and "read" in a.lower()
+        }
         return alcance_de_correo.issubset(concedidos)
 
     def marcar_revocada(self) -> None:
