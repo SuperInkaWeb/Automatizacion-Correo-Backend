@@ -22,6 +22,7 @@ from mailauto.modules.extraction.domain.ports import (
     FiltrosDeRegistro,
     RepositorioDeRegistros,
 )
+from mailauto.modules.extraction.domain.value_objects import Importe
 from mailauto.modules.extraction.infrastructure.profiles.sunat_arrendamiento import (
     PerfilSunatArrendamiento,
 )
@@ -153,7 +154,7 @@ def test_extrae_los_ocho_campos_de_un_documento_limpio(
         "periodo",
         "fecha_de_pago",
         "numero_de_operacion",
-        "importe",
+        "importe_pagado",
     }
 
 
@@ -216,9 +217,48 @@ def test_convierte_los_campos_en_un_registro_con_objetos_de_valor(
     assert registro.ruc_contribuyente is not None
     assert registro.ruc_contribuyente.valor == "20131312955"
     assert str(registro.periodo) == "202603"
-    assert str(registro.importe) == "1850.00"
-    assert registro.importe is not None
-    assert registro.importe.moneda == "PEN"
+    assert str(registro.importe_pagado) == "1850.00"
+    assert registro.importe_pagado is not None
+    assert registro.importe_pagado.moneda == "PEN"
+
+
+# Un recibo real tiene cuatro montos distintos; antes se colapsaban en
+# uno solo y el motor guardaba cualquiera.
+_DOCUMENTO_CON_VARIOS_MONTOS = """\
+Numero de Formulario: 1683
+RUC: 10071840871
+Periodo: 202510
+Tributo: 3011 - Impuesto a la Renta de 1ra Categoria
+Documento Inquilino: RUC - 20563529378
+Tipo de Bien: PREDIO
+Monto de Alquiler: S/ 6,500.00
+Tributo Resultante: S/ 325.00
+Importe Pagado: S/ 329.00
+"""
+
+
+def test_separa_los_cuatro_montos_del_recibo(perfil: PerfilSunatArrendamiento) -> None:
+    """
+    Cada monto va a su campo: el alquiler pactado no es el tributo ni lo
+    pagado. Anclar "Tributo: 3011" como codigo (no monto) es parte de
+    esto: sin ello, 3011 entraba como importe.
+    """
+    campos = perfil.extraer_campos(_DOCUMENTO_CON_VARIOS_MONTOS)
+
+    assert str(Importe.interpretar(campos["monto_alquiler"].valor)) == "6500.00"
+    assert str(Importe.interpretar(campos["tributo_resultante"].valor)) == "325.00"
+    assert str(Importe.interpretar(campos["importe_pagado"].valor)) == "329.00"
+    assert campos["tipo_de_bien"].valor == "PREDIO"
+    assert "tipo_doc_inquilino" in campos
+
+
+def test_lee_un_importe_enmascarado_con_asteriscos(
+    perfil: PerfilSunatArrendamiento,
+) -> None:
+    """El Banco de la Nacion imprime "S/ *********326.00"; el patron no debe
+    romperse al ver los asteriscos entre el simbolo y el numero."""
+    campos = perfil.extraer_campos("Importe pagado : S/ *********326.00")
+    assert str(Importe.interpretar(campos["importe_pagado"].valor)) == "326.00"
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -285,7 +325,7 @@ async def test_una_correccion_valida_se_aplica_y_aprueba(
 ) -> None:
     repositorio = RepositorioDeRevisionFalso(_pendiente())
     registro = await RevisarRegistro(repositorio).corregir_y_aprobar(
-        contexto_a, uuid4(), {"ruc_contribuyente": "20131312955", "importe": "1850.00"}
+        contexto_a, uuid4(), {"ruc_contribuyente": "20131312955", "importe_pagado": "1850.00"}
     )
 
     assert registro.ruc_contribuyente is not None
@@ -351,11 +391,11 @@ def test_los_campos_dudosos_guian_al_revisor() -> None:
     registro = RegistroTributario(
         confianza_por_campo={
             "ruc_contribuyente": 0.98,
-            "importe": 0.31,
+            "importe_pagado": 0.31,
             "periodo": 0.45,
         }
     )
-    assert registro.campos_dudosos() == ["importe", "periodo"]
+    assert registro.campos_dudosos() == ["importe_pagado", "periodo"]
 
 
 # ─────────────────────────────────────────────────────────────────────
@@ -371,7 +411,7 @@ def _filas() -> list[FilaDeReporte]:
             periodo="03/2026",
             fecha_de_pago="15/04/2026",
             numero_de_operacion="0012345678",
-            importe="1850.00",
+            importe_pagado="1850.00",
             moneda="PEN",
             estado="complete",
             revision="not_required",
@@ -380,7 +420,7 @@ def _filas() -> list[FilaDeReporte]:
             ruc_contribuyente="20100047218",
             nombre_contribuyente="COMERCIAL SAN MARTIN EIRL",
             periodo="03/2026",
-            importe="",
+            importe_pagado="",
             estado="partial",
             revision="pending",
         ),
@@ -408,7 +448,7 @@ def test_el_excel_escribe_el_importe_como_numero() -> None:
     assert hoja is not None
 
     columna_importe = next(
-        c for c, (clave, _) in enumerate(COLUMNAS, start=1) if clave == "importe"
+        c for c, (clave, _) in enumerate(COLUMNAS, start=1) if clave == "importe_pagado"
     )
     celda = hoja.cell(row=2, column=columna_importe)
     assert isinstance(celda.value, (int, float))

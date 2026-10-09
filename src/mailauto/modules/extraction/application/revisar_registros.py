@@ -50,10 +50,15 @@ _CORREGIBLES: dict[str, Any] = {
     "periodo": PeriodoTributario.interpretar,
     "fecha_de_pago": FechaDePago.interpretar,
     "numero_de_operacion": NumeroDeOperacion.interpretar,
-    "importe": Importe.interpretar,
+    "monto_alquiler": Importe.interpretar,
+    "tributo_resultante": Importe.interpretar,
+    "importe_pagado": Importe.interpretar,
+    "intereses_moratorios": Importe.interpretar,
 }
 # Campos de texto libre: no hay nada que validar mas alla de la longitud.
-_CORREGIBLES_DE_TEXTO: frozenset[str] = frozenset({"nombre_contribuyente", "nombre_inquilino"})
+_CORREGIBLES_DE_TEXTO: frozenset[str] = frozenset(
+    {"nombre_contribuyente", "nombre_inquilino", "tipo_doc_inquilino", "tipo_de_bien"}
+)
 _LONGITUD_MAXIMA_TEXTO = 120
 
 

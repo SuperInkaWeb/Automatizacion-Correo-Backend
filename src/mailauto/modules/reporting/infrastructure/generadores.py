@@ -41,16 +41,26 @@ from mailauto.modules.reporting.domain.ports import (
 
 # Formato contable peruano: separador de miles y dos decimales.
 _FORMATO_IMPORTE: Final = "#,##0.00"
+# Columnas monetarias: se escriben como numero (no texto) para que la
+# columna sume al seleccionarla.
+_COLUMNAS_NUMERICAS: Final[frozenset[str]] = frozenset(
+    {"monto_alquiler", "tributo_resultante", "importe_pagado", "intereses_moratorios"}
+)
 _ANCHOS: Final[dict[str, int]] = {
     "ruc_contribuyente": 14,
     "nombre_contribuyente": 38,
+    "tipo_doc_inquilino": 16,
     "ruc_inquilino": 14,
     "nombre_inquilino": 38,
+    "tipo_de_bien": 12,
     "periodo": 10,
+    "monto_alquiler": 14,
+    "tributo_resultante": 16,
+    "importe_pagado": 14,
+    "intereses_moratorios": 16,
+    "moneda": 8,
     "fecha_de_pago": 13,
     "numero_de_operacion": 18,
-    "importe": 14,
-    "moneda": 8,
     "estado": 18,
     "revision": 14,
     "archivo_origen": 34,
@@ -107,7 +117,7 @@ class GeneradorExcel(GeneradorDeReporte):
             valor = getattr(fila, clave)
             celda = WriteOnlyCell(hoja, value=valor)
 
-            if clave == "importe" and valor:
+            if clave in _COLUMNAS_NUMERICAS and valor:
                 # Numero de verdad: asi la columna suma al seleccionarla.
                 try:
                     celda.value = float(Decimal(valor))

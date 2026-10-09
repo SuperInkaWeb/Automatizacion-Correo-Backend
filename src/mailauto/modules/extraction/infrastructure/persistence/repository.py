@@ -184,13 +184,23 @@ def _volcar_en_orm(registro: RegistroTributario, fila: RegistroTributarioORM) ->
     fila.nombre_contribuyente = registro.nombre_contribuyente[:120]
     fila.ruc_inquilino = str(registro.ruc_inquilino) if registro.ruc_inquilino else None
     fila.nombre_inquilino = registro.nombre_inquilino[:120]
+    fila.tipo_doc_inquilino = registro.tipo_doc_inquilino[:40]
+    fila.tipo_de_bien = registro.tipo_de_bien[:40]
     fila.periodo = str(registro.periodo) if registro.periodo else None
     fila.fecha_de_pago = registro.fecha_de_pago.valor if registro.fecha_de_pago else None
     fila.numero_de_operacion = (
         str(registro.numero_de_operacion) if registro.numero_de_operacion else None
     )
-    fila.importe = registro.importe.cantidad if registro.importe else None
-    fila.moneda = registro.importe.moneda if registro.importe else "PEN"
+    fila.monto_alquiler = registro.monto_alquiler.cantidad if registro.monto_alquiler else None
+    fila.tributo_resultante = (
+        registro.tributo_resultante.cantidad if registro.tributo_resultante else None
+    )
+    fila.importe_pagado = registro.importe_pagado.cantidad if registro.importe_pagado else None
+    fila.intereses_moratorios = (
+        registro.intereses_moratorios.cantidad if registro.intereses_moratorios else None
+    )
+    # Una sola moneda por fila: la del primer monto que la tenga.
+    fila.moneda = _moneda_de(registro)
     fila.campos_crudos = dict(registro.campos_crudos)
     fila.confianza_por_campo = dict(registro.confianza_por_campo)
     fila.completitud = registro.completitud.value
@@ -215,10 +225,15 @@ def _a_dominio(fila: RegistroTributarioORM) -> RegistroTributario:
         nombre_contribuyente=fila.nombre_contribuyente,
         ruc_inquilino=Ruc.interpretar(fila.ruc_inquilino),
         nombre_inquilino=fila.nombre_inquilino,
+        tipo_doc_inquilino=fila.tipo_doc_inquilino,
+        tipo_de_bien=fila.tipo_de_bien,
         periodo=PeriodoTributario.interpretar(fila.periodo),
         fecha_de_pago=_a_fecha(fila.fecha_de_pago),
         numero_de_operacion=NumeroDeOperacion.interpretar(fila.numero_de_operacion),
-        importe=_a_importe(fila.importe, fila.moneda),
+        monto_alquiler=_a_importe(fila.monto_alquiler, fila.moneda),
+        tributo_resultante=_a_importe(fila.tributo_resultante, fila.moneda),
+        importe_pagado=_a_importe(fila.importe_pagado, fila.moneda),
+        intereses_moratorios=_a_importe(fila.intereses_moratorios, fila.moneda),
         campos_crudos=dict(fila.campos_crudos or {}),
         confianza_por_campo={k: float(v) for k, v in (fila.confianza_por_campo or {}).items()},
         completitud=Completitud(fila.completitud),
@@ -244,3 +259,16 @@ def _a_importe(cantidad: Decimal | None, moneda: str) -> Importe | None:
         # Importe fuera de rango guardado por una version anterior: se
         # descarta el campo en lugar de impedir leer el registro.
         return None
+
+
+def _moneda_de(registro: RegistroTributario) -> str:
+    """La moneda del primer monto que la tenga; PEN si no hay ninguno."""
+    for monto in (
+        registro.importe_pagado,
+        registro.monto_alquiler,
+        registro.tributo_resultante,
+        registro.intereses_moratorios,
+    ):
+        if monto is not None:
+            return monto.moneda
+    return "PEN"

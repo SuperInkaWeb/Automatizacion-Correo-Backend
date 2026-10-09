@@ -133,6 +133,10 @@ _ETIQUETA_NOMBRE: Final = rf"{_NOMBRE_BASE}(?:\s*[/y]\s*{_NOMBRE_BASE})?"
 
 _DIGITOS_RUC: Final = r"(\d[\d\s\-]{9,16})"
 _FECHA: Final = r"(\d{1,2}\s*[/\-.]\s*\d{1,2}\s*[/\-.]\s*\d{2,4})"
+# Valor monetario: simbolo opcional y posibles asteriscos de enmascarado
+# —el Banco de la Nacion imprime "S/ *********326.00"— seguidos del
+# numero. El objeto de valor Importe se queda luego solo con las cifras.
+_MONTO: Final = r"((?:s\s*/\.?|us\$|\$)?[\s*]*\d[\d.,]{0,17})"
 
 
 # ── Patrones por campo ───────────────────────────────────────────────
@@ -159,7 +163,14 @@ _PATRONES: Final[dict[str, tuple[_Patron, ...]]] = {
     ),
     "nombre_inquilino": (
         _compilar(rf"{_ETIQUETA_NOMBRE}{_DEL}{_ARRENDATARIO}{_SEP}([^\n]{{4,120}})", 0.94),
-        _compilar(rf"{_ARRENDATARIO}\s*[:]\s*([A-ZÁÉÍÓÚÑ][^\n]{{3,120}})", 0.84),
+        # El valor va en la MISMA linea de la etiqueta ([ \t], no \s, que
+        # cruzaria el salto) y no empieza por un tipo de documento:
+        # "Documento Inquilino: RUC - 20..." no es el nombre.
+        _compilar(
+            rf"{_ARRENDATARIO}[ \t]*:[ \t]*"
+            r"(?!(?:r\.?u\.?c|dni|c\.?e|pasaporte|\d))([A-ZÁÉÍÓÚÑ][^\n]{3,120})",
+            0.84,
+        ),
     ),
     "periodo": (
         _compilar(
@@ -181,24 +192,59 @@ _PATRONES: Final[dict[str, tuple[_Patron, ...]]] = {
         ),
     ),
     "numero_de_operacion": (
+        # El valor debe empezar por un digito: el numero de operacion es
+        # numerico, y asi "Operacion SUNAT: 77..." no captura "SUNAT".
+        # Se salta ademas un calificador como "SUNAT" o "bancaria".
         _compilar(
             rf"(?:{_tolerante('nro')}|{_tolerante('numero')}|{_tolerante('num')}|n)?\.?\s*"
-            rf"{_DEL}{_tolerante('operacion')}{_SEP}([A-Z0-9\-]{{4,30}})",
+            rf"{_DEL}{_tolerante('operacion')}(?:\s*[a-z]+)?{_SEP}([0-9][0-9\-]{{3,29}})",
             0.95,
         ),
         _compilar(
-            rf"(?:{_tolerante('nro')}|{_tolerante('numero')})?\.?\s*{_DEL}{_tolerante('orden')}{_SEP}([A-Z0-9\-]{{4,30}})",
+            rf"(?:{_tolerante('nro')}|{_tolerante('numero')})?\.?\s*"
+            rf"{_DEL}{_tolerante('orden')}{_SEP}([0-9][0-9\-]{{3,29}})",
             0.82,
         ),
     ),
-    "importe": (
+    "monto_alquiler": (
+        _compilar(rf"{_tolerante('monto')}{_DEL}{_tolerante('alquiler')}{_SEP}{_MONTO}", 0.95),
+    ),
+    "tributo_resultante": (
+        # Anclado a "resultante": "Tributo: 3011" es el codigo del
+        # tributo, no un importe, y sin anclar se colaria como monto.
+        _compilar(rf"{_tolerante('tributo')}\s*{_tolerante('resultante')}{_SEP}{_MONTO}", 0.95),
+    ),
+    "importe_pagado": (
         _compilar(
-            rf"(?:{_tolerante('importe')}|{_tolerante('monto')}|{_tolerante('total')})"
-            rf"(?:\s*(?:{_tolerante('pagado')}|{_tolerante('a pagar')}))?{_SEP}"
-            r"((?:s\s*/\.?|us\$|\$)?\s*[\d.,]{1,18})",
+            rf"{_tolerante('importe')}\s*"
+            rf"(?:{_tolerante('pagado')}|{_tolerante('total')}){_SEP}{_MONTO}",
             0.95,
         ),
-        _compilar(r"\bs\s*/\.?\s*([\d.,]{1,18})", 0.82),
+        # "Importe:" a secas, cuando no precisa "pagado" ni "total".
+        _compilar(rf"\b{_tolerante('importe')}{_SEP}{_MONTO}", 0.80),
+    ),
+    "intereses_moratorios": (
+        _compilar(
+            rf"{_tolerante('interes')}[a-z]*\s*{_tolerante('moratorio')}[a-z]*{_SEP}{_MONTO}",
+            0.9,
+        ),
+    ),
+    "tipo_de_bien": (
+        # `\s*` entre "tipo" y "bien" para aceptar "Tipo Bien" ademas de
+        # "Tipo de Bien": el "de" (que aporta _DEL) no siempre esta.
+        _compilar(
+            rf"{_tolerante('tipo')}\s*{_DEL}{_tolerante('bien')}{_SEP}([A-Za-z]{{3,20}})", 0.9
+        ),
+    ),
+    "tipo_doc_inquilino": (
+        # Tipo de documento del inquilino: casi siempre "RUC" (a veces
+        # con un codigo delante, "06 - RUC"). Se limita a tipos conocidos
+        # para no arrastrar el numero que viene detras.
+        _compilar(
+            rf"{_tolerante('inquilino')}{_SEP}(?:\d{{2}}\s*[-/]?\s*)?"
+            r"(r\.?\s*u\.?\s*c\.?|dni|c\.?\s*e\.?|pasaporte)",
+            0.88,
+        ),
     ),
 }
 
@@ -210,7 +256,10 @@ _VALIDADORES: Final = {
     "periodo": PeriodoTributario.interpretar,
     "fecha_de_pago": FechaDePago.interpretar,
     "numero_de_operacion": NumeroDeOperacion.interpretar,
-    "importe": Importe.interpretar,
+    "monto_alquiler": Importe.interpretar,
+    "tributo_resultante": Importe.interpretar,
+    "importe_pagado": Importe.interpretar,
+    "intereses_moratorios": Importe.interpretar,
 }
 
 # Penalizacion cuando el patron coincidio pero el valor no supero su
@@ -284,10 +333,15 @@ class PerfilSunatArrendamiento(PerfilDeExtraccion):
             nombre_contribuyente=_limpiar_nombre(crudo("nombre_contribuyente")),
             ruc_inquilino=Ruc.interpretar(crudo("ruc_inquilino")),
             nombre_inquilino=_limpiar_nombre(crudo("nombre_inquilino")),
+            tipo_doc_inquilino=_normalizar_tipo(crudo("tipo_doc_inquilino")),
+            tipo_de_bien=_normalizar_tipo(crudo("tipo_de_bien")),
             periodo=PeriodoTributario.interpretar(crudo("periodo")),
             fecha_de_pago=FechaDePago.interpretar(crudo("fecha_de_pago")),
             numero_de_operacion=NumeroDeOperacion.interpretar(crudo("numero_de_operacion")),
-            importe=Importe.interpretar(crudo("importe")),
+            monto_alquiler=Importe.interpretar(crudo("monto_alquiler")),
+            tributo_resultante=Importe.interpretar(crudo("tributo_resultante")),
+            importe_pagado=Importe.interpretar(crudo("importe_pagado")),
+            intereses_moratorios=Importe.interpretar(crudo("intereses_moratorios")),
             campos_crudos={n: c.valor for n, c in campos.items()},
             confianza_por_campo={n: c.confianza for n, c in campos.items()},
         )
@@ -360,3 +414,16 @@ def _limpiar_nombre(crudo: str | None) -> str:
         flags=re.IGNORECASE,
     )[0]
     return re.sub(r"[\s:;,.\-]+$", "", corte.strip())[:_LONGITUD_MAXIMA_NOMBRE]
+
+
+def _normalizar_tipo(crudo: str | None) -> str:
+    """
+    Normaliza un codigo corto a mayusculas sin puntos ni espacios.
+
+    El tipo de documento aparece como "R.U.C", "RUC" o "r u c" segun el
+    formato; unificarlo evita cuatro variantes del mismo valor en el
+    reporte. El tipo de bien ("PREDIO") pasa igual, ya en mayusculas.
+    """
+    if not crudo:
+        return ""
+    return re.sub(r"[.\s]+", "", crudo).upper()[:40]

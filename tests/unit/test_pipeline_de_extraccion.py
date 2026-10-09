@@ -57,7 +57,7 @@ def test_se_detiene_cuando_los_campos_imprescindibles_son_fiables() -> None:
         campos={
             "ruc_contribuyente": campo("20131312955", 0.98),
             "periodo": campo("202603", 0.96),
-            "importe": campo("1850.00", 0.95),
+            "importe_pagado": campo("1850.00", 0.95),
         },
     )
     assert policies.es_suficiente_para_detenerse(resultado)
@@ -88,7 +88,7 @@ def test_no_se_detiene_si_un_imprescindible_es_dudoso() -> None:
         campos={
             "ruc_contribuyente": campo("20131312955", 1.0),
             "periodo": campo("202603", 1.0),
-            "importe": campo("18S0.00", 0.35),
+            "importe_pagado": campo("18S0.00", 0.35),
         },
     )
     assert not policies.es_suficiente_para_detenerse(resultado)
@@ -105,31 +105,33 @@ def test_combina_el_mejor_valor_de_cada_campo() -> None:
         estrategia=Estrategia.TEXTO_NATIVO,
         campos={
             "ruc_contribuyente": campo("20131312955", 0.98),
-            "importe": campo("18S0", 0.30),
+            "importe_pagado": campo("18S0", 0.30),
         },
     )
     ocr = ResultadoDeEstrategia(
         estrategia=Estrategia.OCR_LOCAL,
         campos={
             "ruc_contribuyente": campo("2013I312955", 0.60, Estrategia.OCR_LOCAL),
-            "importe": campo("1850.00", 0.88, Estrategia.OCR_LOCAL),
+            "importe_pagado": campo("1850.00", 0.88, Estrategia.OCR_LOCAL),
         },
     )
 
     mejor = policies.combinar([nativo, ocr])
     assert mejor["ruc_contribuyente"].valor == "20131312955"
-    assert mejor["importe"].valor == "1850.00"
-    assert mejor["importe"].estrategia is Estrategia.OCR_LOCAL
+    assert mejor["importe_pagado"].valor == "1850.00"
+    assert mejor["importe_pagado"].estrategia is Estrategia.OCR_LOCAL
 
 
 def test_combinar_ignora_los_resultados_fallidos() -> None:
     fallido = ResultadoDeEstrategia(
-        estrategia=Estrategia.TABLAS_PDF, campos={"importe": campo("999", 1.0)}, error="timeout"
+        estrategia=Estrategia.TABLAS_PDF,
+        campos={"importe_pagado": campo("999", 1.0)},
+        error="timeout",
     )
     bueno = ResultadoDeEstrategia(
-        estrategia=Estrategia.TEXTO_NATIVO, campos={"importe": campo("1850.00", 0.9)}
+        estrategia=Estrategia.TEXTO_NATIVO, campos={"importe_pagado": campo("1850.00", 0.9)}
     )
-    assert policies.combinar([fallido, bueno])["importe"].valor == "1850.00"
+    assert policies.combinar([fallido, bueno])["importe_pagado"].valor == "1850.00"
 
 
 def test_en_empate_gana_la_estrategia_mas_barata() -> None:
@@ -153,7 +155,7 @@ def test_en_empate_gana_la_estrategia_mas_barata() -> None:
             {
                 "ruc_contribuyente": ("20131312955", 0.98),
                 "periodo": ("202603", 0.96),
-                "importe": ("1850.00", 0.95),
+                "importe_pagado": ("1850.00", 0.95),
             },
             Completitud.COMPLETO,
         ),
@@ -161,7 +163,7 @@ def test_en_empate_gana_la_estrategia_mas_barata() -> None:
             {
                 "ruc_contribuyente": ("20131312955", 0.98),
                 "periodo": ("202603", 0.96),
-                "importe": ("1850.00", 0.40),
+                "importe_pagado": ("1850.00", 0.40),
             },
             Completitud.PARCIAL,
         ),
@@ -195,7 +197,7 @@ def test_un_completo_con_un_campo_deseable_dudoso_tambien_se_revisa() -> None:
     campos = {
         "ruc_contribuyente": campo("20131312955", 0.98),
         "periodo": campo("202603", 0.96),
-        "importe": campo("1850.00", 0.95),
+        "importe_pagado": campo("1850.00", 0.95),
         "nombre_contribuyente": campo("1NM0B1L1AR1A", 0.42),
     }
     assert policies.decidir_revision(Completitud.COMPLETO, campos) is EstadoDeRevision.PENDIENTE
@@ -209,7 +211,7 @@ def test_la_confianza_global_pondera_los_campos_imprescindibles() -> None:
     campos = {
         "ruc_contribuyente": campo("x", 0.2),
         "periodo": campo("x", 0.2),
-        "importe": campo("x", 0.2),
+        "importe_pagado": campo("x", 0.2),
         "nombre_contribuyente": campo("x", 1.0),
         "nombre_inquilino": campo("x", 1.0),
         "fecha_de_pago": campo("x", 1.0),
@@ -309,7 +311,7 @@ def _completos() -> dict[str, CampoExtraido]:
     return {
         "ruc_contribuyente": campo("20131312955", 0.98),
         "periodo": campo("03/2026", 0.96),
-        "importe": campo("S/ 1850.00", 0.95),
+        "importe_pagado": campo("S/ 1850.00", 0.95),
     }
 
 
@@ -427,7 +429,7 @@ async def test_convierte_los_campos_crudos_en_objetos_de_valor() -> None:
     assert registro.ruc_contribuyente is not None
     assert registro.ruc_contribuyente.valor == "20131312955"
     assert str(registro.periodo) == "202603"
-    assert str(registro.importe) == "1850.00"
+    assert str(registro.importe_pagado) == "1850.00"
 
 
 async def test_no_reextrae_un_adjunto_ya_procesado() -> None:

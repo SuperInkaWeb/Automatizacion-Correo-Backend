@@ -63,7 +63,22 @@ class RegistroTributarioORM(MixinDeTenant, MixinDeTimestamps, Base):
             postgresql_where="estado_de_revision = 'pending'",
         ),
         Index("ix_records_trabajo", "tenant_id", "trabajo_id"),
-        CheckConstraint("importe IS NULL OR importe >= 0", name="ck_records_importe_no_negativo"),
+        CheckConstraint(
+            "monto_alquiler IS NULL OR monto_alquiler >= 0",
+            name="ck_records_monto_alquiler_no_negativo",
+        ),
+        CheckConstraint(
+            "tributo_resultante IS NULL OR tributo_resultante >= 0",
+            name="ck_records_tributo_no_negativo",
+        ),
+        CheckConstraint(
+            "importe_pagado IS NULL OR importe_pagado >= 0",
+            name="ck_records_importe_pagado_no_negativo",
+        ),
+        CheckConstraint(
+            "intereses_moratorios IS NULL OR intereses_moratorios >= 0",
+            name="ck_records_intereses_no_negativo",
+        ),
     )
 
     id: Mapped[UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True)
@@ -80,14 +95,20 @@ class RegistroTributarioORM(MixinDeTenant, MixinDeTimestamps, Base):
     nombre_contribuyente: Mapped[str] = mapped_column(String(120), nullable=False, default="")
     ruc_inquilino: Mapped[str | None] = mapped_column(String(11), nullable=True)
     nombre_inquilino: Mapped[str] = mapped_column(String(120), nullable=False, default="")
+    tipo_doc_inquilino: Mapped[str] = mapped_column(String(40), nullable=False, default="")
+    tipo_de_bien: Mapped[str] = mapped_column(String(40), nullable=False, default="")
     # YYYYMM: seis caracteres fijos. Ordenar alfabeticamente equivale a
     # ordenar cronologicamente, que es justo lo que pide el reporte.
     periodo: Mapped[str | None] = mapped_column(String(6), nullable=True)
     fecha_de_pago: Mapped[date | None] = mapped_column(Date, nullable=True)
     numero_de_operacion: Mapped[str | None] = mapped_column(String(40), nullable=True)
     # Numeric y no Float: un reporte tributario tiene que cuadrar al
-    # centimo y el binario flotante no representa 0.10 exactamente.
-    importe: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
+    # centimo y el binario flotante no representa 0.10 exactamente. Son
+    # cuatro montos distintos; la moneda se comparte (un recibo no mezcla).
+    monto_alquiler: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
+    tributo_resultante: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
+    importe_pagado: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
+    intereses_moratorios: Mapped[Decimal | None] = mapped_column(Numeric(14, 2), nullable=True)
     moneda: Mapped[str] = mapped_column(String(3), nullable=False, default="PEN")
 
     # ── Calidad y trazabilidad ───────────────────────────────────────

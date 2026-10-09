@@ -24,7 +24,9 @@ from mailauto.modules.extraction.domain.entities import (
 # Campos sin los cuales el registro no sirve para nada: identifican al
 # contribuyente, al periodo y al dinero. Si falta alguno, no hay fila
 # que llevar al reporte.
-CAMPOS_IMPRESCINDIBLES: frozenset[str] = frozenset({"ruc_contribuyente", "periodo", "importe"})
+CAMPOS_IMPRESCINDIBLES: frozenset[str] = frozenset(
+    {"ruc_contribuyente", "periodo", "importe_pagado"}
+)
 
 # Campos que enriquecen el registro pero cuya ausencia no lo invalida.
 CAMPOS_DESEABLES: frozenset[str] = frozenset(
@@ -32,8 +34,13 @@ CAMPOS_DESEABLES: frozenset[str] = frozenset(
         "nombre_contribuyente",
         "ruc_inquilino",
         "nombre_inquilino",
+        "tipo_doc_inquilino",
+        "tipo_de_bien",
         "fecha_de_pago",
         "numero_de_operacion",
+        "monto_alquiler",
+        "tributo_resultante",
+        "intereses_moratorios",
     }
 )
 

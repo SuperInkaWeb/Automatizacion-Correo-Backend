@@ -262,17 +262,27 @@ def _a_decimal(crudo: str) -> Decimal:
     convenciones cuando hay dos.
     """
     limpio = crudo.replace(" ", "")
-    ultima_coma = limpio.rfind(",")
-    ultimo_punto = limpio.rfind(".")
+    tiene_coma = "," in limpio
+    tiene_punto = "." in limpio
 
-    if ultima_coma > ultimo_punto:
-        # Formato 1.234,56: el punto agrupa miles.
-        limpio = limpio.replace(".", "").replace(",", ".")
-    elif ultimo_punto > ultima_coma:
-        # Formato 1,234.56: la coma agrupa miles.
-        limpio = limpio.replace(",", "")
-    else:
-        limpio = limpio.replace(",", "").replace(".", "")
+    if tiene_coma and tiene_punto:
+        # Con los dos separadores, el ultimo es el decimal en ambas
+        # convenciones: 1.234,56 (europeo) y 1,234.56 (anglosajon).
+        if limpio.rfind(",") > limpio.rfind("."):
+            limpio = limpio.replace(".", "").replace(",", ".")
+        else:
+            limpio = limpio.replace(",", "")
+    elif tiene_coma or tiene_punto:
+        sep = "," if tiene_coma else "."
+        if limpio.count(sep) > 1:
+            # Varias apariciones del mismo separador solo pueden agrupar
+            # miles: 1,234,567 -> 1234567.
+            limpio = limpio.replace(sep, "")
+        else:
+            entero, _, frac = limpio.partition(sep)
+            # Tres cifras tras un unico separador son miles (6,500 = seis
+            # mil quinientos, no 6.50); una o dos son los centimos.
+            limpio = entero + frac if len(frac) == 3 else f"{entero}.{frac}"
 
     return Decimal(limpio).quantize(Decimal("0.01"))
 

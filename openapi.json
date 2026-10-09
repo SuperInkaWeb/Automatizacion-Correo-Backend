@@ -665,7 +665,7 @@
             "title": "Id",
             "type": "string"
           },
-          "importe": {
+          "importe_pagado": {
             "anyOf": [
               {
                 "type": "string"
@@ -674,7 +674,18 @@
                 "type": "null"
               }
             ],
-            "title": "Importe"
+            "title": "Importe Pagado"
+          },
+          "intereses_moratorios": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intereses Moratorios"
           },
           "moneda": {
             "anyOf": [
@@ -686,6 +697,17 @@
               }
             ],
             "title": "Moneda"
+          },
+          "monto_alquiler": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monto Alquiler"
           },
           "nombre_contribuyente": {
             "title": "Nombre Contribuyente",
@@ -743,10 +765,29 @@
             ],
             "title": "Ruc Inquilino"
           },
+          "tipo_de_bien": {
+            "title": "Tipo De Bien",
+            "type": "string"
+          },
+          "tipo_doc_inquilino": {
+            "title": "Tipo Doc Inquilino",
+            "type": "string"
+          },
           "trabajo_id": {
             "format": "uuid",
             "title": "Trabajo Id",
             "type": "string"
+          },
+          "tributo_resultante": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tributo Resultante"
           }
         },
         "required": [
@@ -758,10 +799,15 @@
           "nombre_contribuyente",
           "ruc_inquilino",
           "nombre_inquilino",
+          "tipo_doc_inquilino",
+          "tipo_de_bien",
           "periodo",
           "fecha_de_pago",
           "numero_de_operacion",
-          "importe",
+          "monto_alquiler",
+          "tributo_resultante",
+          "importe_pagado",
+          "intereses_moratorios",
           "moneda",
           "completitud",
           "estado_de_revision",

@@ -65,13 +65,18 @@ class FilaDeReporte:
 
     ruc_contribuyente: str = ""
     nombre_contribuyente: str = ""
+    tipo_doc_inquilino: str = ""
     ruc_inquilino: str = ""
     nombre_inquilino: str = ""
+    tipo_de_bien: str = ""
     periodo: str = ""
+    monto_alquiler: str = ""
+    tributo_resultante: str = ""
+    importe_pagado: str = ""
+    intereses_moratorios: str = ""
+    moneda: str = ""
     fecha_de_pago: str = ""
     numero_de_operacion: str = ""
-    importe: str = ""
-    moneda: str = ""
     estado: str = ""
     revision: str = ""
     archivo_origen: str = ""
@@ -82,13 +87,18 @@ class FilaDeReporte:
 COLUMNAS: tuple[tuple[str, str], ...] = (
     ("ruc_contribuyente", "RUC Arrendador"),
     ("nombre_contribuyente", "Nombre / Razon Social"),
+    ("tipo_doc_inquilino", "Tipo Doc. Inquilino"),
     ("ruc_inquilino", "RUC Arrendatario"),
     ("nombre_inquilino", "Inquilino"),
+    ("tipo_de_bien", "Tipo de Bien"),
     ("periodo", "Periodo"),
+    ("monto_alquiler", "Monto Alquiler"),
+    ("tributo_resultante", "Tributo Resultante"),
+    ("importe_pagado", "Importe Pagado"),
+    ("intereses_moratorios", "Intereses Moratorios"),
+    ("moneda", "Moneda"),
     ("fecha_de_pago", "Fecha de Pago"),
     ("numero_de_operacion", "N. Operacion"),
-    ("importe", "Importe"),
-    ("moneda", "Moneda"),
     ("estado", "Estado de Extraccion"),
     ("revision", "Revision"),
     ("archivo_origen", "Archivo"),

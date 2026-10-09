@@ -137,10 +137,20 @@ class RegistroTributario:
     nombre_contribuyente: str = ""
     ruc_inquilino: Ruc | None = None
     nombre_inquilino: str = ""
+    tipo_doc_inquilino: str = ""
+    tipo_de_bien: str = ""
     periodo: PeriodoTributario | None = None
     fecha_de_pago: FechaDePago | None = None
     numero_de_operacion: NumeroDeOperacion | None = None
-    importe: Importe | None = None
+    # Los cuatro importes del recibo, antes colapsados en uno solo: el
+    # alquiler pactado, el tributo calculado, lo efectivamente pagado y
+    # los intereses por mora. Distinguirlos es lo que pide un reporte
+    # tributario real, donde no es lo mismo lo que se debe que lo que se
+    # pago.
+    monto_alquiler: Importe | None = None
+    tributo_resultante: Importe | None = None
+    importe_pagado: Importe | None = None
+    intereses_moratorios: Importe | None = None
 
     # Calidad
     campos_crudos: dict[str, str] = field(default_factory=dict)

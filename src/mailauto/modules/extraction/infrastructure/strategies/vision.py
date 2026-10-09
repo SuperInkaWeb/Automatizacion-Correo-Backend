@@ -120,10 +120,15 @@ class _Lectura(BaseModel):
     nombre_contribuyente: _CampoLeido = Field(default_factory=_CampoLeido)
     ruc_inquilino: _CampoLeido = Field(default_factory=_CampoLeido)
     nombre_inquilino: _CampoLeido = Field(default_factory=_CampoLeido)
+    tipo_doc_inquilino: _CampoLeido = Field(default_factory=_CampoLeido)
+    tipo_de_bien: _CampoLeido = Field(default_factory=_CampoLeido)
     periodo: _CampoLeido = Field(default_factory=_CampoLeido)
     fecha_de_pago: _CampoLeido = Field(default_factory=_CampoLeido)
     numero_de_operacion: _CampoLeido = Field(default_factory=_CampoLeido)
-    importe: _CampoLeido = Field(default_factory=_CampoLeido)
+    monto_alquiler: _CampoLeido = Field(default_factory=_CampoLeido)
+    tributo_resultante: _CampoLeido = Field(default_factory=_CampoLeido)
+    importe_pagado: _CampoLeido = Field(default_factory=_CampoLeido)
+    intereses_moratorios: _CampoLeido = Field(default_factory=_CampoLeido)
 
 
 class VisionIA(EstrategiaDeExtraccion):
@@ -269,10 +274,15 @@ class VisionIA(EstrategiaDeExtraccion):
             "nombre_contribuyente",
             "ruc_inquilino",
             "nombre_inquilino",
+            "tipo_doc_inquilino",
+            "tipo_de_bien",
             "periodo",
             "fecha_de_pago",
             "numero_de_operacion",
-            "importe",
+            "monto_alquiler",
+            "tributo_resultante",
+            "importe_pagado",
+            "intereses_moratorios",
         ):
             leido: _CampoLeido = getattr(lectura, nombre)
             if not leido.valor.strip():

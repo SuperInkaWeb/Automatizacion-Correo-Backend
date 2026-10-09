@@ -29,6 +29,7 @@ from mailauto.modules.extraction.domain.ports import (
     LectorDeAdjuntos,
     RepositorioDeRegistros,
 )
+from mailauto.modules.extraction.domain.value_objects import Importe
 from mailauto.modules.ingestion.domain.ports import (
     AlmacenDeObjetos,
     CredencialDeBuzon,
@@ -133,16 +134,31 @@ def _contexto_de_lectura(tenant_id: UUID) -> TenantContext:
 
 def _a_fila(registro: RegistroTributario) -> FilaDeReporte:
     """Convierte un registro extraido en una fila de reporte."""
+
+    def monto(valor: Importe | None) -> str:
+        return str(valor) if valor else ""
+
+    montos = (
+        registro.importe_pagado,
+        registro.monto_alquiler,
+        registro.tributo_resultante,
+        registro.intereses_moratorios,
+    )
     return FilaDeReporte(
         ruc_contribuyente=str(registro.ruc_contribuyente or ""),
         nombre_contribuyente=registro.nombre_contribuyente,
+        tipo_doc_inquilino=registro.tipo_doc_inquilino,
         ruc_inquilino=str(registro.ruc_inquilino or ""),
         nombre_inquilino=registro.nombre_inquilino,
+        tipo_de_bien=registro.tipo_de_bien,
         periodo=registro.periodo.legible if registro.periodo else "",
+        monto_alquiler=monto(registro.monto_alquiler),
+        tributo_resultante=monto(registro.tributo_resultante),
+        importe_pagado=monto(registro.importe_pagado),
+        intereses_moratorios=monto(registro.intereses_moratorios),
+        moneda=next((m.moneda for m in montos if m is not None), ""),
         fecha_de_pago=(registro.fecha_de_pago.legible if registro.fecha_de_pago else ""),
         numero_de_operacion=str(registro.numero_de_operacion or ""),
-        importe=str(registro.importe) if registro.importe else "",
-        moneda=registro.importe.moneda if registro.importe else "",
         estado=registro.completitud.value,
         revision=registro.estado_de_revision.value,
         archivo_origen=str(registro.adjunto_id),

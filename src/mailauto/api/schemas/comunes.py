@@ -158,6 +158,19 @@ class EscaneoSalida(BaseModel):
 # ── Registros extraidos ──────────────────────────────────────────────
 
 
+def _moneda_del_registro(registro: Any) -> str | None:  # noqa: ANN401 - entidad de dominio
+    """La moneda del primer monto presente; None si el registro no trae ninguno."""
+    for monto in (
+        registro.importe_pagado,
+        registro.monto_alquiler,
+        registro.tributo_resultante,
+        registro.intereses_moratorios,
+    ):
+        if monto is not None:
+            return str(monto.moneda)
+    return None
+
+
 class RegistroSalida(BaseModel):
     id: UUID
     adjunto_id: UUID
@@ -167,10 +180,15 @@ class RegistroSalida(BaseModel):
     nombre_contribuyente: str
     ruc_inquilino: str | None
     nombre_inquilino: str
+    tipo_doc_inquilino: str
+    tipo_de_bien: str
     periodo: str | None
     fecha_de_pago: str | None
     numero_de_operacion: str | None
-    importe: str | None
+    monto_alquiler: str | None
+    tributo_resultante: str | None
+    importe_pagado: str | None
+    intereses_moratorios: str | None
     moneda: str | None
     completitud: str
     estado_de_revision: str
@@ -204,13 +222,22 @@ class RegistroSalida(BaseModel):
             nombre_contribuyente=registro.nombre_contribuyente,
             ruc_inquilino=str(registro.ruc_inquilino) if registro.ruc_inquilino else None,
             nombre_inquilino=registro.nombre_inquilino,
+            tipo_doc_inquilino=registro.tipo_doc_inquilino,
+            tipo_de_bien=registro.tipo_de_bien,
             periodo=str(registro.periodo) if registro.periodo else None,
             fecha_de_pago=str(registro.fecha_de_pago) if registro.fecha_de_pago else None,
             numero_de_operacion=str(registro.numero_de_operacion)
             if registro.numero_de_operacion
             else None,
-            importe=str(registro.importe) if registro.importe else None,
-            moneda=registro.importe.moneda if registro.importe else None,
+            monto_alquiler=str(registro.monto_alquiler) if registro.monto_alquiler else None,
+            tributo_resultante=str(registro.tributo_resultante)
+            if registro.tributo_resultante
+            else None,
+            importe_pagado=str(registro.importe_pagado) if registro.importe_pagado else None,
+            intereses_moratorios=str(registro.intereses_moratorios)
+            if registro.intereses_moratorios
+            else None,
+            moneda=_moneda_del_registro(registro),
             completitud=registro.completitud.value,
             estado_de_revision=registro.estado_de_revision.value,
             campos_dudosos=registro.campos_dudosos(),
