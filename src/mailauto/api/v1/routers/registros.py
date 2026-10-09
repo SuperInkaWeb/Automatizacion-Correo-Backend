@@ -18,6 +18,7 @@ Decision de diseño
 
 from __future__ import annotations
 
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Response, status
@@ -36,6 +37,22 @@ from mailauto.modules.extraction.domain.ports import FiltrosDeRegistro
 from mailauto.modules.reporting.domain.ports import FormatoDeReporte
 
 router = APIRouter(tags=["registros"])
+
+
+async def _con_origen(
+    contenedor: ContenedorDep, contexto: ContextoDep, registros: list[Any]
+) -> list[RegistroSalida]:
+    """
+    Enriquece registros con su procedencia (correo y adjunto).
+
+    El origen vive en el modulo de ingesta; se trae en UNA consulta por
+    lote y se une aqui, en la frontera, para que la UI pueda decir de
+    que correo salio cada registro sin que extraccion conozca esas tablas.
+    """
+    origenes = await contenedor.consultar_origen_de_adjuntos.de_adjuntos(
+        contexto, [r.adjunto_id for r in registros]
+    )
+    return [RegistroSalida.desde_dominio(r, origenes.get(r.adjunto_id)) for r in registros]
 
 
 # ── Registros ────────────────────────────────────────────────────────
@@ -57,7 +74,7 @@ async def listar_registros(
         pagina,
     )
     return Respuesta(
-        data=[RegistroSalida.desde_dominio(r) for r in resultado.elementos],
+        data=await _con_origen(contenedor, contexto, resultado.elementos),
         meta=MetaDePagina(cursor=resultado.siguiente_cursor, hay_mas=resultado.hay_mas),
     )
 
@@ -67,7 +84,8 @@ async def obtener_registro(
     registro_id: UUID, contexto: ContextoDep, contenedor: ContenedorDep
 ) -> Respuesta[RegistroSalida]:
     registro = await contenedor.consultar_registros.obtener(contexto, registro_id)
-    return Respuesta(data=RegistroSalida.desde_dominio(registro))
+    data = await _con_origen(contenedor, contexto, [registro])
+    return Respuesta(data=data[0])
 
 
 # ── Revision humana ──────────────────────────────────────────────────
@@ -80,7 +98,7 @@ async def cola_de_revision(
     """Registros que el pipeline no pudo dar por buenos."""
     resultado = await contenedor.consultar_registros.cola_de_revision(contexto, pagina)
     return Respuesta(
-        data=[RegistroSalida.desde_dominio(r) for r in resultado.elementos],
+        data=await _con_origen(contenedor, contexto, resultado.elementos),
         meta=MetaDePagina(cursor=resultado.siguiente_cursor, hay_mas=resultado.hay_mas),
     )
 

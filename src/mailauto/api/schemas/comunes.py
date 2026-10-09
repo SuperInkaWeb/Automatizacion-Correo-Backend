@@ -180,9 +180,16 @@ class RegistroSalida(BaseModel):
     confianza_por_campo: dict[str, float]
     estrategia_usada: str | None
     creado_en: datetime
+    # Procedencia: de que correo y adjunto salio el registro. Se compone
+    # al leer (no vive en el registro) y es None si el origen ya no esta
+    # o no se consulto. Es lo que permite a la UI decir "de que correo es".
+    adjunto_nombre: str | None = None
+    correo_remitente: str | None = None
+    correo_asunto: str | None = None
+    correo_recibido_en: datetime | None = None
 
     @classmethod
-    def desde_dominio(cls, registro: Any) -> RegistroSalida:  # noqa: ANN401
+    def desde_dominio(cls, registro: Any, origen: Any = None) -> RegistroSalida:  # noqa: ANN401
         # `campos_crudos` no se expone: contiene el texto tal cual lo
         # leyo el motor, que puede arrastrar fragmentos del documento
         # ajenos a los campos.
@@ -210,6 +217,10 @@ class RegistroSalida(BaseModel):
             confianza_por_campo=registro.confianza_por_campo,
             estrategia_usada=registro.estrategia_usada.value if registro.estrategia_usada else None,
             creado_en=registro.creado_en,
+            adjunto_nombre=origen.nombre_adjunto if origen else None,
+            correo_remitente=origen.remitente if origen else None,
+            correo_asunto=origen.asunto if origen else None,
+            correo_recibido_en=origen.recibido_en if origen else None,
         )
 
 

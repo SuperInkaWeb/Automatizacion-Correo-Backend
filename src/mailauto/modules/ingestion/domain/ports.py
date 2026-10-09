@@ -242,6 +242,23 @@ class CanalDeProgreso(ABC):
 # ── Persistencia ─────────────────────────────────────────────────────
 
 
+@dataclass(frozen=True, slots=True)
+class OrigenDeAdjunto:
+    """
+    Procedencia de un registro: de que correo y adjunto salio.
+
+    Lo consume la UI de revision y de registros para que una persona
+    sepa que documento esta mirando. No vive en el registro extraido
+    (otro contexto) sino que se compone al leer, uniendo el adjunto con
+    su mensaje.
+    """
+
+    nombre_adjunto: str
+    remitente: str
+    asunto: str
+    recibido_en: datetime | None
+
+
 class RepositorioDeIngesta(ABC):
     # Trabajos
     @abstractmethod
@@ -301,6 +318,17 @@ class RepositorioDeIngesta(ABC):
 
     @abstractmethod
     async def guardar_adjunto(self, tenant_id: UUID, adjunto: Adjunto) -> Adjunto: ...
+
+    @abstractmethod
+    async def origen_de_adjuntos(
+        self, ctx: TenantContext, adjunto_ids: list[UUID]
+    ) -> dict[UUID, OrigenDeAdjunto]:
+        """
+        Procedencia (correo y nombre) de un lote de adjuntos.
+
+        En lote y no uno a uno: la pantalla de registros pide la de una
+        pagina entera, y una consulta por adjunto seria el N+1 de siempre.
+        """
 
     # Errores
     @abstractmethod

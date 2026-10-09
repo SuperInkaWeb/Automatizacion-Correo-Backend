@@ -73,6 +73,7 @@ from mailauto.modules.ingestion.application.ejecutar_escaneo import EjecutarEsca
 from mailauto.modules.ingestion.application.gestionar_escaneos import (
     CancelarEscaneo,
     ConsultarEscaneo,
+    ConsultarOrigenDeAdjuntos,
     IniciarEscaneo,
 )
 from mailauto.modules.ingestion.domain.ports import ProveedorDeCorreo
@@ -153,6 +154,7 @@ class Contenedor:
     iniciar_escaneo: IniciarEscaneo
     cancelar_escaneo: CancelarEscaneo
     consultar_escaneo: ConsultarEscaneo
+    consultar_origen_de_adjuntos: ConsultarOrigenDeAdjuntos
     ejecutar_escaneo: EjecutarEscaneo
     extraer_documento: ExtraerDocumento
     consultar_registros: ConsultarRegistros
@@ -305,6 +307,7 @@ async def construir_contenedor(settings: Settings) -> Contenedor:
         ),
         cancelar_escaneo=CancelarEscaneo(repo_ingesta, cola),
         consultar_escaneo=ConsultarEscaneo(repo_ingesta),
+        consultar_origen_de_adjuntos=ConsultarOrigenDeAdjuntos(repo_ingesta),
         ejecutar_escaneo=EjecutarEscaneo(
             repositorio=repo_ingesta,
             credenciales=AdaptadorDeCredenciales(obtener_token),

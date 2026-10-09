@@ -36,7 +36,7 @@ from mailauto.modules.ingestion.domain.entities import (
     ParametrosDeEscaneo,
     TrabajoDeEscaneo,
 )
-from mailauto.modules.ingestion.domain.ports import RepositorioDeIngesta
+from mailauto.modules.ingestion.domain.ports import OrigenDeAdjunto, RepositorioDeIngesta
 from mailauto.modules.ingestion.infrastructure.models import (
     AdjuntoORM,
     ErrorDeProcesamientoORM,
@@ -216,6 +216,36 @@ class RepositorioDeIngestaPostgres(RepositorioDeIngesta):
             )
             await sesion.execute(sentencia)
             return adjunto
+
+    async def origen_de_adjuntos(
+        self, ctx: TenantContext, adjunto_ids: list[UUID]
+    ) -> dict[UUID, OrigenDeAdjunto]:
+        if not adjunto_ids:
+            return {}
+        async with self._sesiones.sesion_de_tenant(ctx) as sesion:
+            # Un solo JOIN para todo el lote. RLS fija el tenant en ambas
+            # tablas, asi que no hace falta filtrarlo a mano.
+            consulta = (
+                select(
+                    AdjuntoORM.id,
+                    AdjuntoORM.nombre_original,
+                    MensajeDeCorreoORM.remitente,
+                    MensajeDeCorreoORM.asunto,
+                    MensajeDeCorreoORM.recibido_en,
+                )
+                .join(MensajeDeCorreoORM, AdjuntoORM.mensaje_id == MensajeDeCorreoORM.id)
+                .where(AdjuntoORM.id.in_(adjunto_ids))
+            )
+            filas = await sesion.execute(consulta)
+            return {
+                fila.id: OrigenDeAdjunto(
+                    nombre_adjunto=fila.nombre_original,
+                    remitente=fila.remitente,
+                    asunto=fila.asunto,
+                    recibido_en=fila.recibido_en,
+                )
+                for fila in filas
+            }
 
     # ── Errores ──────────────────────────────────────────────────────
 

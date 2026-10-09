@@ -34,6 +34,7 @@ from mailauto.modules.ingestion.domain.entities import (
 )
 from mailauto.modules.ingestion.domain.ports import (
     ColaDeTrabajos,
+    OrigenDeAdjunto,
     RepositorioDeIngesta,
 )
 from mailauto.shared.errors import LimiteExcedido, RecursoNoEncontrado
@@ -151,3 +152,22 @@ class ConsultarEscaneo:
         if trabajo_id is not None:
             await self.obtener(ctx, trabajo_id)
         return await self._repositorio.listar_errores(ctx, pagina, trabajo_id)
+
+
+class ConsultarOrigenDeAdjuntos:
+    """
+    Procedencia (correo y nombre de archivo) de un lote de adjuntos.
+
+    La usa la capa API para enriquecer los registros extraidos con el
+    correo del que salieron, sin que el modulo de extraccion tenga que
+    conocer las tablas de ingesta: el composition root conecta ambos.
+    """
+
+    def __init__(self, repositorio: RepositorioDeIngesta) -> None:
+        self._repositorio = repositorio
+
+    async def de_adjuntos(
+        self, ctx: TenantContext, adjunto_ids: list[UUID]
+    ) -> dict[UUID, OrigenDeAdjunto]:
+        ctx.exigir(Permiso.RECORD_READ)
+        return await self._repositorio.origen_de_adjuntos(ctx, adjunto_ids)

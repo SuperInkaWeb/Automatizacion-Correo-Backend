@@ -552,6 +552,17 @@
             "title": "Adjunto Id",
             "type": "string"
           },
+          "adjunto_nombre": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjunto Nombre"
+          },
           "campos_dudosos": {
             "items": {
               "type": "string"
@@ -569,6 +580,40 @@
             },
             "title": "Confianza Por Campo",
             "type": "object"
+          },
+          "correo_asunto": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correo Asunto"
+          },
+          "correo_recibido_en": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correo Recibido En"
+          },
+          "correo_remitente": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Correo Remitente"
           },
           "creado_en": {
             "format": "date-time",

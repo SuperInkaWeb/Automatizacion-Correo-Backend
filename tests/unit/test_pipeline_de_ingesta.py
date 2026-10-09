@@ -29,6 +29,7 @@ from mailauto.modules.ingestion.domain.ports import (
     CanalDeProgreso,
     ColaDeTrabajos,
     CredencialDeBuzon,
+    OrigenDeAdjunto,
     ProveedorDeCorreo,
     ProveedorDeCredenciales,
     ReferenciaDeAdjunto,
@@ -104,6 +105,11 @@ class RepositorioFalso(RepositorioDeIngesta):
         self.adjuntos.append(adjunto)
         self.hashes.add(adjunto.sha256)
         return adjunto
+
+    async def origen_de_adjuntos(
+        self, ctx: TenantContext, adjunto_ids: list[UUID]
+    ) -> dict[UUID, OrigenDeAdjunto]:
+        return {}
 
     async def guardar_errores(self, tenant_id: UUID, errores: list[ErrorDeProcesamiento]) -> None:
         self.errores.extend(errores)
