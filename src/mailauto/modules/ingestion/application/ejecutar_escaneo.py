@@ -256,6 +256,11 @@ class EjecutarEscaneo:
                 )
 
             self._actualizar_progreso(trabajo)
+            # Se publica correo a correo (solo Redis, barato): asi la barra
+            # avanza de forma continua en lugar de quedarse clavada y saltar
+            # al terminar el lote. El estado duradero se persiste una vez por
+            # lote, mas abajo, que es lo que de verdad hace falta guardar.
+            await self._publicar_progreso(trabajo)
 
         await self._guardar_y_publicar(trabajo)
         return False
@@ -430,14 +435,25 @@ class EjecutarEscaneo:
 
     async def _guardar_y_publicar(self, trabajo: TrabajoDeEscaneo) -> None:
         await self._repositorio.actualizar_trabajo(trabajo.tenant_id, trabajo)
-        await self._progreso.publicar(
-            trabajo.id,
-            {
-                "trabajo_id": str(trabajo.id),
-                "estado": trabajo.estado.value,
-                "fase": trabajo.fase.value,
-                "progreso_porcentaje": trabajo.progreso_porcentaje,
-                "contadores": trabajo.contadores.como_dict(),
-                "codigo_de_error": trabajo.codigo_de_error,
-            },
-        )
+        await self._progreso.publicar(trabajo.id, self._evento(trabajo))
+
+    async def _publicar_progreso(self, trabajo: TrabajoDeEscaneo) -> None:
+        """
+        Publica el progreso en vivo sin tocar la base de datos.
+
+        Persistir en cada correo multiplicaria las escrituras sin aportar
+        nada: el estado duradero se guarda por lote y basta para recuperar
+        el trabajo tras un reinicio. Esto solo alimenta la barra del SSE.
+        """
+        await self._progreso.publicar(trabajo.id, self._evento(trabajo))
+
+    @staticmethod
+    def _evento(trabajo: TrabajoDeEscaneo) -> dict[str, object]:
+        return {
+            "trabajo_id": str(trabajo.id),
+            "estado": trabajo.estado.value,
+            "fase": trabajo.fase.value,
+            "progreso_porcentaje": trabajo.progreso_porcentaje,
+            "contadores": trabajo.contadores.como_dict(),
+            "codigo_de_error": trabajo.codigo_de_error,
+        }
