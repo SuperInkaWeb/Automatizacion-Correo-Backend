@@ -79,6 +79,14 @@ class Settings(BaseSettings):
     oidc_audience: str
     oidc_jwks_cache_seconds: Annotated[int, Field(ge=60, le=86_400)] = 3600
     oidc_roles_claim: str = "https://automatizacion-correos/roles"
+    # Auto-aprovisionamiento: con esto activo, un usuario que inicia
+    # sesion por primera vez y no pertenece a ningun tenant recibe su
+    # propio espacio de trabajo (como dueño) y puede usar la aplicacion
+    # de inmediato. Sin el (por defecto), un usuario nuevo queda sin
+    # acceso hasta que alguien lo invita: es el modo cerrado, mas seguro
+    # para despliegues internos. Es autoservicio: solo tiene sentido si
+    # el tenant de Auth0 no se comparte con otros productos.
+    auto_aprovisionar_tenant: bool = False
 
     # ── Criptografia ─────────────────────────────────────────────────
     # Clave maestra (KEK) en base64. En produccion debe venir de un KMS o

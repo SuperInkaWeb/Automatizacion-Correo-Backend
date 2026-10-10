@@ -61,3 +61,15 @@ class RepositorioDeIdentidad(ABC):
         transaccion. Son indivisibles: un tenant sin dueño seria
         inaccesible y permaneceria huerfano.
         """
+
+    @abstractmethod
+    async def aprovisionar_tenant_personal(self, usuario: Usuario) -> Membresia:
+        """
+        Da al usuario un espacio propio como dueño, de forma idempotente.
+
+        Pensado para el autoservicio: lo llama el resolver cuando un
+        usuario nuevo sin membresia inicia sesion. Debe ser seguro ante
+        llamadas concurrentes (el panel dispara varias peticiones al
+        cargar): si el usuario ya tiene membresia, la devuelve en vez de
+        crear un segundo espacio.
+        """

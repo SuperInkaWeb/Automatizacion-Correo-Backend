@@ -36,8 +36,14 @@ from mailauto.shared.security.jwt_verifier import ClaimsVerificados
 class ResolverIdentidad:
     """Convierte claims verificados en contexto de tenant."""
 
-    def __init__(self, repositorio: RepositorioDeIdentidad) -> None:
+    def __init__(
+        self, repositorio: RepositorioDeIdentidad, *, auto_aprovisionar: bool = False
+    ) -> None:
         self._repositorio = repositorio
+        # Autoservicio: si esta activo, un usuario nuevo sin membresia
+        # recibe su propio espacio al iniciar sesion, en vez de quedar
+        # sin acceso hasta ser invitado (ver settings).
+        self._auto_aprovisionar = auto_aprovisionar
 
     async def ejecutar(
         self,
@@ -52,7 +58,7 @@ class ResolverIdentidad:
         if not usuario.esta_activo:
             raise ErrorDeAutorizacion("La cuenta esta suspendida.")
 
-        membresia = await self._resolver_membresia(usuario.id, tenant_solicitado)
+        membresia = await self._resolver_membresia(usuario, tenant_solicitado)
 
         tenant = await self._repositorio.obtener_tenant(membresia.tenant_id)
         if tenant is None:
@@ -84,7 +90,7 @@ class ResolverIdentidad:
             )
         )
 
-    async def _resolver_membresia(self, user_id: UUID, tenant_solicitado: UUID | None):  # type: ignore[no-untyped-def]
+    async def _resolver_membresia(self, usuario: Usuario, tenant_solicitado: UUID | None):  # type: ignore[no-untyped-def]
         """
         Determina bajo que tenant opera la peticion.
 
@@ -94,15 +100,20 @@ class ResolverIdentidad:
         como se filtran datos al tenant equivocado.
         """
         if tenant_solicitado is not None:
-            membresia = await self._repositorio.obtener_membresia(user_id, tenant_solicitado)
+            membresia = await self._repositorio.obtener_membresia(usuario.id, tenant_solicitado)
             if membresia is None:
                 # 403 y no 404: distinguirlos permitiria enumerar que
                 # tenants existen probando identificadores.
                 raise ErrorDeAutorizacion()
             return membresia
 
-        membresias = await self._repositorio.listar_membresias(user_id)
+        membresias = await self._repositorio.listar_membresias(usuario.id)
         if not membresias:
+            if self._auto_aprovisionar:
+                # Autoservicio: se le da su propio espacio como dueño. El
+                # repositorio lo hace de forma idempotente y segura ante
+                # peticiones concurrentes.
+                return await self._repositorio.aprovisionar_tenant_personal(usuario)
             raise ErrorDeAutorizacion("Tu cuenta no esta asociada a ningun espacio de trabajo.")
         if len(membresias) > 1:
             raise ErrorDeAutorizacion("Indica el espacio de trabajo con la cabecera X-Tenant-Id.")

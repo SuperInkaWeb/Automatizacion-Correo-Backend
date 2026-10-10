@@ -17,9 +17,11 @@ Nota
 
 from __future__ import annotations
 
+import re
 from uuid import UUID
 
-from sqlalchemy import select, update
+from sqlalchemy import select, text, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from mailauto.modules.identity.domain.entities import (
     EstadoDeCuenta,
@@ -35,7 +37,7 @@ from mailauto.modules.identity.infrastructure.models import (
 )
 from mailauto.shared.db.session import FabricaDeSesiones
 from mailauto.shared.security.context import Rol
-from mailauto.shared.types import ahora_utc
+from mailauto.shared.types import ahora_utc, uuid7
 
 
 class RepositorioDeIdentidadPostgres(RepositorioDeIdentidad):
@@ -53,15 +55,26 @@ class RepositorioDeIdentidadPostgres(RepositorioDeIdentidad):
 
     async def crear_usuario(self, usuario: Usuario) -> Usuario:
         async with self._sesiones.sesion_de_sistema_sin_aislamiento() as sesion:
-            fila = UsuarioORM(
-                id=usuario.id,
-                external_id=usuario.external_id,
-                email=usuario.email,
-                nombre_visible=usuario.nombre_visible,
-                estado=usuario.estado.value,
+            # ON CONFLICT en vez de INSERT a secas: al cargar el panel se
+            # disparan varias peticiones en paralelo y todas resuelven la
+            # identidad a la vez. Sin esto, la segunda reventaria por el
+            # indice unico de `external_id`. Se inserta o, si ya existe, se
+            # relee: en ambos casos se devuelve el mismo usuario.
+            await sesion.execute(
+                pg_insert(UsuarioORM)
+                .values(
+                    id=usuario.id,
+                    external_id=usuario.external_id,
+                    email=usuario.email,
+                    nombre_visible=usuario.nombre_visible,
+                    estado=usuario.estado.value,
+                )
+                .on_conflict_do_nothing(index_elements=["external_id"])
             )
-            sesion.add(fila)
-            await sesion.flush()
+            fila = await sesion.scalar(
+                select(UsuarioORM).where(UsuarioORM.external_id == usuario.external_id)
+            )
+            assert fila is not None  # recien insertado o ya existente
             return _a_usuario(fila)
 
     async def registrar_acceso(self, user_id: UUID) -> None:
@@ -123,8 +136,57 @@ class RepositorioDeIdentidadPostgres(RepositorioDeIdentidad):
             await sesion.flush()
             return _a_tenant(fila_tenant), membresia
 
+    async def aprovisionar_tenant_personal(self, usuario: Usuario) -> Membresia:
+        async with self._sesiones.sesion_de_sistema_sin_aislamiento() as sesion:
+            # Lock por usuario mientras dura la transaccion: serializa el
+            # aprovisionamiento concurrente (varias peticiones del panel a
+            # la vez) para no crear dos espacios al mismo usuario. No bloquea
+            # a otros usuarios: la clave del lock es distinta para cada uno.
+            await sesion.execute(
+                text("SELECT pg_advisory_xact_lock(hashtext(:clave))"),
+                {"clave": f"aprovisionar:{usuario.id}"},
+            )
+
+            existente = await sesion.scalar(
+                select(MembresiaORM).where(MembresiaORM.user_id == usuario.id).limit(1)
+            )
+            if existente is not None:
+                return _a_membresia(existente)
+
+            tenant_id = uuid7()
+            base = _slug_desde(usuario.email or usuario.nombre_visible)
+            sesion.add(
+                TenantORM(
+                    id=tenant_id,
+                    nombre=(usuario.nombre_visible or usuario.email or "Mi espacio")[:200],
+                    # Sufijo con parte del id: garantiza que el slug es unico
+                    # aunque dos usuarios deriven el mismo nombre.
+                    slug=f"{base}-{tenant_id.hex[:8]}",
+                    estado=EstadoDeCuenta.ACTIVA.value,
+                )
+            )
+            await sesion.flush()
+
+            membresia = Membresia(tenant_id=tenant_id, user_id=usuario.id, rol=Rol.OWNER)
+            sesion.add(
+                MembresiaORM(
+                    id=membresia.id,
+                    tenant_id=tenant_id,
+                    user_id=usuario.id,
+                    rol=Rol.OWNER.value,
+                )
+            )
+            await sesion.flush()
+            return membresia
+
 
 # ── Mapeo ORM -> dominio ─────────────────────────────────────────────
+
+
+def _slug_desde(texto: str) -> str:
+    """Slug a partir de un nombre o correo: minusculas, guiones, acotado."""
+    base = re.sub(r"[^a-z0-9]+", "-", (texto or "").lower()).strip("-")
+    return base[:60] or "espacio"
 
 
 def _a_usuario(fila: UsuarioORM) -> Usuario:

@@ -78,6 +78,15 @@ class RepositorioDeIdentidadFalso(RepositorioDeIdentidad):
     ) -> tuple[Tenant, Membresia]:
         raise NotImplementedError
 
+    async def aprovisionar_tenant_personal(self, usuario: Usuario) -> Membresia:
+        if self.membresias:
+            return self.membresias[0]
+        tenant = Tenant(nombre=usuario.email or "Mi espacio", slug="auto")
+        self.tenants[tenant.id] = tenant
+        membresia = Membresia(tenant_id=tenant.id, user_id=usuario.id, rol=Rol.OWNER)
+        self.membresias.append(membresia)
+        return membresia
+
 
 def _claims(sub: str = "auth0|usuario") -> ClaimsVerificados:
     return ClaimsVerificados(sub=sub, email="persona@ejemplo.com", roles=(), scopes=(), expira_en=0)
@@ -149,6 +158,22 @@ async def test_tener_cuenta_en_el_idp_no_concede_acceso_a_ningun_tenant() -> Non
     repositorio = RepositorioDeIdentidadFalso(usuario=_usuario(), membresias=[])
     with pytest.raises(ErrorDeAutorizacion, match="espacio de trabajo"):
         await ResolverIdentidad(repositorio).ejecutar(_claims())
+
+
+async def test_con_autoservicio_un_usuario_nuevo_recibe_su_propio_espacio() -> None:
+    """
+    Con `auto_aprovisionar` activo, un usuario sin membresia no se queda
+    fuera: recibe su propio espacio como dueño y puede usar la aplicacion
+    de inmediato. Es seguro porque es un tenant NUEVO y solo suyo, no el
+    de otro: el aislamiento por RLS sigue intacto.
+    """
+    repositorio = RepositorioDeIdentidadFalso(usuario=_usuario(), membresias=[])
+    contexto = await ResolverIdentidad(repositorio, auto_aprovisionar=True).ejecutar(_claims())
+
+    assert contexto.rol is Rol.OWNER
+    assert contexto.user_id == USUARIO_A
+    assert len(repositorio.membresias) == 1
+    assert repositorio.accesos == [USUARIO_A]
 
 
 # ── Selección de tenant ──────────────────────────────────────────────

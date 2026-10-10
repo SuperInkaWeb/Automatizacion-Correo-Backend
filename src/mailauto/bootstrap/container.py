@@ -290,7 +290,9 @@ async def construir_contenedor(settings: Settings) -> Contenedor:
         verificador=verificador,
         auditoria=auditoria,
         cuotas=CuotasEnRedis(redis),
-        resolver_identidad=ResolverIdentidad(repo_identidad),
+        resolver_identidad=ResolverIdentidad(
+            repo_identidad, auto_aprovisionar=settings.auto_aprovisionar_tenant
+        ),
         iniciar_vinculacion=IniciarVinculacion(
             proveedores_oauth,
             almacen_estado,
