@@ -21,6 +21,7 @@ Por que existe este fichero
 
 from __future__ import annotations
 
+from datetime import date
 from uuid import UUID
 
 from mailauto.modules.extraction.domain.entities import RegistroTributario
@@ -106,14 +107,37 @@ class AdaptadorDeFilasDeReporte(FuenteDeFilas):
     ) -> list[FilaDeReporte]:
         contexto = _contexto_de_lectura(tenant_id)
         registros = await self._repositorio.listar_para_reporte(
-            contexto,
-            FiltrosDeRegistro(
-                ruc=filtros.get("ruc") or None,
-                periodo=filtros.get("periodo") or None,
-            ),
-            limite,
+            contexto, _filtros_desde_dict(filtros), limite
         )
         return [_a_fila(r) for r in registros]
+
+
+def _filtros_desde_dict(filtros: dict[str, str]) -> FiltrosDeRegistro:
+    """
+    Reconstruye los filtros desde el dict que viaja en la exportacion.
+
+    El router los serializo a texto para persistirlos; aqui se vuelven a
+    tipar. Un valor ausente o vacio no filtra.
+    """
+
+    def fecha(clave: str) -> date | None:
+        valor = filtros.get(clave)
+        return date.fromisoformat(valor) if valor else None
+
+    ids_crudo = filtros.get("ids") or ""
+    ids = tuple(UUID(parte) for parte in ids_crudo.split(",") if parte)
+
+    return FiltrosDeRegistro(
+        ruc=filtros.get("ruc") or None,
+        ruc_inquilino=filtros.get("ruc_inquilino") or None,
+        periodo=filtros.get("periodo") or None,
+        periodo_desde=filtros.get("periodo_desde") or None,
+        periodo_hasta=filtros.get("periodo_hasta") or None,
+        fecha_desde=fecha("fecha_desde"),
+        fecha_hasta=fecha("fecha_hasta"),
+        solo_aprobados=filtros.get("solo_aprobados") == "true",
+        ids=ids,
+    )
 
 
 def _contexto_de_lectura(tenant_id: UUID) -> TenantContext:

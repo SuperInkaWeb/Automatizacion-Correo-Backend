@@ -155,12 +155,34 @@ def _aplicar_filtros(consulta, filtros: FiltrosDeRegistro):  # type: ignore[no-u
         consulta = consulta.where(RegistroTributarioORM.trabajo_id == filtros.trabajo_id)
     if filtros.ruc:
         consulta = consulta.where(RegistroTributarioORM.ruc_contribuyente == filtros.ruc)
+    if filtros.ruc_inquilino:
+        consulta = consulta.where(RegistroTributarioORM.ruc_inquilino == filtros.ruc_inquilino)
     if filtros.periodo:
         consulta = consulta.where(RegistroTributarioORM.periodo == filtros.periodo)
+    # El periodo es AAAAMM de longitud fija, asi que el orden alfabetico
+    # coincide con el cronologico y la comparacion de rango es correcta.
+    if filtros.periodo_desde:
+        consulta = consulta.where(RegistroTributarioORM.periodo >= filtros.periodo_desde)
+    if filtros.periodo_hasta:
+        consulta = consulta.where(RegistroTributarioORM.periodo <= filtros.periodo_hasta)
+    if filtros.fecha_desde is not None:
+        consulta = consulta.where(RegistroTributarioORM.fecha_de_pago >= filtros.fecha_desde)
+    if filtros.fecha_hasta is not None:
+        consulta = consulta.where(RegistroTributarioORM.fecha_de_pago <= filtros.fecha_hasta)
     if filtros.solo_pendientes_de_revision:
         consulta = consulta.where(
             RegistroTributarioORM.estado_de_revision == EstadoDeRevision.PENDIENTE.value
         )
+    if filtros.solo_aprobados:
+        # Lo utilizable para un reporte: aprobado a mano o que nunca
+        # necesito revision. Excluye pendientes y rechazados.
+        consulta = consulta.where(
+            RegistroTributarioORM.estado_de_revision.in_(
+                (EstadoDeRevision.NO_REQUERIDA.value, EstadoDeRevision.APROBADO.value)
+            )
+        )
+    if filtros.ids:
+        consulta = consulta.where(RegistroTributarioORM.id.in_(filtros.ids))
     return consulta
 
 

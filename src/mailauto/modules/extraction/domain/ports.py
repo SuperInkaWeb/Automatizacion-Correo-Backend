@@ -21,6 +21,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from datetime import date
 from uuid import UUID
 
 from mailauto.modules.extraction.domain.entities import (
@@ -148,9 +149,17 @@ class FiltrosDeRegistro:
     """Filtros del listado de registros. Todos opcionales y combinables."""
 
     trabajo_id: UUID | None = None
-    ruc: str | None = None
-    periodo: str | None = None
+    ruc: str | None = None  # RUC del arrendador (contribuyente)
+    periodo: str | None = None  # periodo exacto (AAAAMM)
     solo_pendientes_de_revision: bool = False
+    # Filtros del reporte a medida.
+    ruc_inquilino: str | None = None
+    periodo_desde: str | None = None  # AAAAMM; el orden lexico = cronologico
+    periodo_hasta: str | None = None
+    fecha_desde: date | None = None  # rango de fecha de pago
+    fecha_hasta: date | None = None
+    solo_aprobados: bool = False  # excluye pendientes y rechazados
+    ids: tuple[UUID, ...] = ()  # "exportar solo estos" (seleccion del usuario)
 
 
 class RepositorioDeRegistros(ABC):

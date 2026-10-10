@@ -273,7 +273,16 @@ class SolicitarExportacionEntrada(BaseModel):
 
     formato: Annotated[str, Field(pattern="^(xlsx|csv)$")] = "xlsx"
     ruc: Annotated[str | None, Field(default=None, pattern=r"^\d{11}$")] = None
+    ruc_inquilino: Annotated[str | None, Field(default=None, pattern=r"^\d{11}$")] = None
     periodo: Annotated[str | None, Field(default=None, pattern=r"^\d{6}$")] = None
+    periodo_desde: Annotated[str | None, Field(default=None, pattern=r"^\d{6}$")] = None
+    periodo_hasta: Annotated[str | None, Field(default=None, pattern=r"^\d{6}$")] = None
+    fecha_desde: date | None = None
+    fecha_hasta: date | None = None
+    solo_aprobados: bool = False
+    # "Exportar solo estos": los registros que el usuario marco. Si va
+    # vacio, se exporta todo lo que cumplan los demas filtros.
+    ids: list[UUID] = Field(default_factory=list)
 
 
 class ExportacionSalida(BaseModel):

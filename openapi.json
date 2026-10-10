@@ -1251,11 +1251,43 @@
       "SolicitarExportacionEntrada": {
         "additionalProperties": false,
         "properties": {
+          "fecha_desde": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Desde"
+          },
+          "fecha_hasta": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Hasta"
+          },
           "formato": {
             "default": "xlsx",
             "pattern": "^(xlsx|csv)$",
             "title": "Formato",
             "type": "string"
+          },
+          "ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Ids",
+            "type": "array"
           },
           "periodo": {
             "anyOf": [
@@ -1269,6 +1301,30 @@
             ],
             "title": "Periodo"
           },
+          "periodo_desde": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{6}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Periodo Desde"
+          },
+          "periodo_hasta": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{6}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Periodo Hasta"
+          },
           "ruc": {
             "anyOf": [
               {
@@ -1280,6 +1336,23 @@
               }
             ],
             "title": "Ruc"
+          },
+          "ruc_inquilino": {
+            "anyOf": [
+              {
+                "pattern": "^\\d{11}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ruc Inquilino"
+          },
+          "solo_aprobados": {
+            "default": false,
+            "title": "Solo Aprobados",
+            "type": "boolean"
           }
         },
         "title": "SolicitarExportacionEntrada",
@@ -1795,7 +1868,7 @@
     },
     "/api/v1/records": {
       "get": {
-        "description": "Listado principal, paginado por cursor.",
+        "description": "Listado principal, paginado por cursor y con filtros combinables.",
         "operationId": "registros_listar_registros",
         "parameters": [
           {
@@ -1835,6 +1908,24 @@
           },
           {
             "in": "query",
+            "name": "ruc_inquilino",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 11,
+                  "pattern": "^\\d{11}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ruc Inquilino"
+            }
+          },
+          {
+            "in": "query",
             "name": "periodo",
             "required": false,
             "schema": {
@@ -1849,6 +1940,86 @@
                 }
               ],
               "title": "Periodo"
+            }
+          },
+          {
+            "in": "query",
+            "name": "periodo_desde",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 6,
+                  "pattern": "^\\d{6}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Periodo Desde"
+            }
+          },
+          {
+            "in": "query",
+            "name": "periodo_hasta",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 6,
+                  "pattern": "^\\d{6}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Periodo Hasta"
+            }
+          },
+          {
+            "in": "query",
+            "name": "fecha_desde",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Fecha Desde"
+            }
+          },
+          {
+            "in": "query",
+            "name": "fecha_hasta",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Fecha Hasta"
+            }
+          },
+          {
+            "in": "query",
+            "name": "solo_aprobados",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Solo Aprobados",
+              "type": "boolean"
             }
           },
           {

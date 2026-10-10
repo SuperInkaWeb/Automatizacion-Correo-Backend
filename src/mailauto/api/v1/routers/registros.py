@@ -18,6 +18,7 @@ Decision de diseño
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 from uuid import UUID
 
@@ -66,12 +67,28 @@ async def listar_registros(
     pagina: PaginacionDep,
     trabajo_id: UUID | None = None,
     ruc: str | None = Query(default=None, max_length=11, pattern=r"^\d{11}$"),
+    ruc_inquilino: str | None = Query(default=None, max_length=11, pattern=r"^\d{11}$"),
     periodo: str | None = Query(default=None, max_length=6, pattern=r"^\d{6}$"),
+    periodo_desde: str | None = Query(default=None, max_length=6, pattern=r"^\d{6}$"),
+    periodo_hasta: str | None = Query(default=None, max_length=6, pattern=r"^\d{6}$"),
+    fecha_desde: date | None = None,
+    fecha_hasta: date | None = None,
+    solo_aprobados: bool = False,
 ) -> Respuesta[list[RegistroSalida]]:
-    """Listado principal, paginado por cursor."""
+    """Listado principal, paginado por cursor y con filtros combinables."""
     resultado = await contenedor.consultar_registros.listar(
         contexto,
-        FiltrosDeRegistro(trabajo_id=trabajo_id, ruc=ruc, periodo=periodo),
+        FiltrosDeRegistro(
+            trabajo_id=trabajo_id,
+            ruc=ruc,
+            ruc_inquilino=ruc_inquilino,
+            periodo=periodo,
+            periodo_desde=periodo_desde,
+            periodo_hasta=periodo_hasta,
+            fecha_desde=fecha_desde,
+            fecha_hasta=fecha_hasta,
+            solo_aprobados=solo_aprobados,
+        ),
         pagina,
     )
     return Respuesta(
@@ -202,11 +219,29 @@ async def solicitar_exportacion(
     respuesta: Response,
 ) -> Respuesta[ExportacionSalida]:
     """Encola la generacion del reporte y devuelve su identificador."""
-    filtros = {
+    # Los filtros viajan como dict[str,str] porque se persisten en la
+    # exportacion y el worker los lee despues; el adaptador de reportes
+    # los reconstruye. Las fechas van en ISO y los ids separados por coma.
+    filtros: dict[str, str] = {
         clave: valor
-        for clave, valor in (("ruc", entrada.ruc), ("periodo", entrada.periodo))
+        for clave, valor in (
+            ("ruc", entrada.ruc),
+            ("ruc_inquilino", entrada.ruc_inquilino),
+            ("periodo", entrada.periodo),
+            ("periodo_desde", entrada.periodo_desde),
+            ("periodo_hasta", entrada.periodo_hasta),
+        )
         if valor
     }
+    if entrada.fecha_desde:
+        filtros["fecha_desde"] = entrada.fecha_desde.isoformat()
+    if entrada.fecha_hasta:
+        filtros["fecha_hasta"] = entrada.fecha_hasta.isoformat()
+    if entrada.solo_aprobados:
+        filtros["solo_aprobados"] = "true"
+    if entrada.ids:
+        filtros["ids"] = ",".join(str(i) for i in entrada.ids)
+
     exportacion = await contenedor.solicitar_exportacion.ejecutar(
         contexto, formato=FormatoDeReporte(entrada.formato), filtros=filtros
     )
