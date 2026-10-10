@@ -39,6 +39,10 @@ from arq.connections import RedisSettings
 
 from mailauto.bootstrap.container import Contenedor, construir_contenedor
 from mailauto.bootstrap.settings import get_settings
+from mailauto.modules.ingestion.infrastructure.cola_redis import (
+    COLA_DE_CRON,
+    COLA_DE_INGESTA,
+)
 from mailauto.shared.observability.logging import configurar_logging, obtener_logger
 
 logger = obtener_logger(__name__)
@@ -186,6 +190,10 @@ class WorkerDeIngesta:
     """
 
     functions: ClassVar[list[Any]] = [ejecutar_escaneo, extraer_adjunto, generar_exportacion]
+    # Cola propia: sin esto, ARQ usa la cola por defecto y el worker de
+    # cron (que no conoce estas funciones) se roba los jobs de escaneo y
+    # los hace fallar con "function not found".
+    queue_name = COLA_DE_INGESTA
     on_startup = _al_arrancar
     on_shutdown = _al_apagar
     redis_settings = _redis_settings()
@@ -212,6 +220,7 @@ class WorkerDeCron:
         cron(refrescar_tokens_proximos_a_vencer, minute={0, 30}, run_at_startup=False),
         cron(purgar_por_retencion, hour=3, minute=0, run_at_startup=False),
     ]
+    queue_name = COLA_DE_CRON
     on_startup = _al_arrancar
     on_shutdown = _al_apagar
     redis_settings = _redis_settings()

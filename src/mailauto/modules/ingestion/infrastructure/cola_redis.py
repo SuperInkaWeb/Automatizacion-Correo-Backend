@@ -33,7 +33,6 @@ from collections.abc import AsyncIterator
 from uuid import UUID
 
 from arq import ArqRedis
-from arq.constants import default_queue_name
 from redis.asyncio import Redis
 
 from mailauto.modules.ingestion.domain.ports import CanalDeProgreso, ColaDeTrabajos
@@ -44,6 +43,14 @@ logger = obtener_logger(__name__)
 NOMBRE_DEL_JOB_DE_ESCANEO = "ejecutar_escaneo"
 NOMBRE_DEL_JOB_DE_EXTRACCION = "extraer_adjunto"
 NOMBRE_DEL_JOB_DE_EXPORTACION = "generar_exportacion"
+
+# Colas SEPARADAS por worker. Si la ingesta y el cron comparten cola, se
+# roban los jobs entre si: cada worker solo registra SUS funciones, asi
+# que cuando el cron saca un `ejecutar_escaneo` (o la ingesta un job de
+# cron) ARQ no encuentra la funcion y el trabajo falla. Cada tipo de
+# worker consume exclusivamente de la suya.
+COLA_DE_INGESTA = "mailauto:ingesta"
+COLA_DE_CRON = "mailauto:cron"
 
 _PREFIJO_CANCELACION = "scan:cancel:"
 _PREFIJO_CANAL = "scan:progress:"
@@ -63,6 +70,7 @@ class ColaDeTrabajosRedis(ColaDeTrabajos):
             str(tenant_id),
             str(trabajo_id),
             _job_id=f"scan:{trabajo_id}",
+            _queue_name=COLA_DE_INGESTA,
         )
         if job is None:
             # ARQ devuelve None cuando el `_job_id` ya existe. No es un
@@ -93,6 +101,7 @@ class ColaDeTrabajosRedis(ColaDeTrabajos):
             # esta en la cola, asi que una doble publicacion no produce
             # dos extracciones del mismo documento.
             _job_id=f"extract:{adjunto_id}",
+            _queue_name=COLA_DE_INGESTA,
         )
         return job.job_id if job is not None else f"extract:{adjunto_id}"
 
@@ -102,6 +111,7 @@ class ColaDeTrabajosRedis(ColaDeTrabajos):
             str(tenant_id),
             str(exportacion_id),
             _job_id=f"export:{exportacion_id}",
+            _queue_name=COLA_DE_INGESTA,
         )
         return job.job_id if job is not None else f"export:{exportacion_id}"
 
@@ -125,11 +135,11 @@ class ColaDeTrabajosRedis(ColaDeTrabajos):
         profundidad sola no distingue una cola de mil trabajos que se vacia
         en un minuto de una de cincuenta que lleva una hora atascada.
         """
-        pendientes = await self._arq.zcard(default_queue_name)
+        pendientes = await self._arq.zcard(COLA_DE_INGESTA)
         if not pendientes:
             return 0, 0.0
 
-        primeros = await self._arq.zrange(default_queue_name, 0, 0, withscores=True)
+        primeros = await self._arq.zrange(COLA_DE_INGESTA, 0, 0, withscores=True)
         if not primeros:
             return int(pendientes), 0.0
 
