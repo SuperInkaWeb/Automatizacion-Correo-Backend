@@ -383,11 +383,16 @@ class ProveedorMicrosoftGraph(ProveedorDeCorreoHttp):
             filtros.append(f"receivedDateTime le {hasta:%Y-%m-%d}T23:59:59Z")
 
         url = f"{self._BASE}/mailFolders/{carpeta or 'inbox'}/messages"
+        # Sin `$orderby`: Graph rechaza (400) combinar un `$filter` sobre
+        # `hasAttachments` con un `$orderby` por `receivedDateTime`, porque
+        # el orden y el filtro caen sobre propiedades distintas. No hace
+        # falta pedirlo: Graph ya devuelve los mensajes de una carpeta en
+        # orden descendente por `receivedDateTime` por defecto, que es justo
+        # el que se quiere (del mas reciente al mas antiguo).
         params: dict[str, Any] | None = {
             "$filter": " and ".join(filtros),
             "$select": "id,subject,from,receivedDateTime",
             "$top": min(50, limite),
-            "$orderby": "receivedDateTime desc",
         }
         entregados = 0
 
