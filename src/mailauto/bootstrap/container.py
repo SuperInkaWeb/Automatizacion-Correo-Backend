@@ -63,7 +63,11 @@ from mailauto.modules.extraction.infrastructure.strategies.pdf import (
 )
 from mailauto.modules.extraction.infrastructure.strategies.vision import (
     VisionIA,
-    crear_cliente,
+    crear_cliente as crear_cliente_anthropic,
+)
+from mailauto.modules.extraction.infrastructure.strategies.vision_groq import (
+    VisionIAGroq,
+    crear_cliente as crear_cliente_groq,
 )
 from mailauto.modules.identity.application.resolver_identidad import ResolverIdentidad
 from mailauto.modules.identity.infrastructure.repository import (
@@ -261,17 +265,30 @@ async def construir_contenedor(settings: Settings) -> Contenedor:
         TablasDePdf(),
         OcrLocal(),
     ]
-    cliente_vision = (
-        crear_cliente(settings.anthropic_api_key) if settings.vision_ai_habilitada else None
-    )
-    if cliente_vision is not None:
-        estrategias.append(
-            VisionIA(
-                cliente_vision,
-                modelo=settings.vision_modelo,
-                esfuerzo=settings.vision_esfuerzo,
+    # Vision IA: un solo proveedor activo, elegido por configuracion
+    # (Groq por defecto). El otro queda disponible sin tocar codigo. Sin
+    # la credencial del elegido no se registra nada y el pipeline sigue
+    # con los tres motores gratuitos.
+    estrategia_vision: EstrategiaDeExtraccion | None = None
+    if settings.vision_ai_habilitada:
+        if settings.vision_proveedor == "groq":
+            cliente_groq = crear_cliente_groq(
+                settings.groq_api_key, base_url=settings.groq_base_url
             )
-        )
+            if cliente_groq is not None:
+                estrategia_vision = VisionIAGroq(
+                    cliente_groq, modelo=settings.groq_vision_modelo
+                )
+        else:
+            cliente_anthropic = crear_cliente_anthropic(settings.anthropic_api_key)
+            if cliente_anthropic is not None:
+                estrategia_vision = VisionIA(
+                    cliente_anthropic,
+                    modelo=settings.vision_modelo,
+                    esfuerzo=settings.vision_esfuerzo,
+                )
+    if estrategia_vision is not None:
+        estrategias.append(estrategia_vision)
 
     # ── Reportes ─────────────────────────────────────────────────────
     repo_exportaciones = RepositorioDeExportacionesPostgres(sesiones)
@@ -331,7 +348,7 @@ async def construir_contenedor(settings: Settings) -> Contenedor:
             perfil=perfil,
             repositorio=repo_registros,
             presupuesto=ControlDePresupuesto(
-                ia_habilitada=cliente_vision is not None,
+                ia_habilitada=estrategia_vision is not None,
                 maximo_llamadas_por_trabajo=settings.vision_maximo_llamadas_por_trabajo,
             ),
         ),

@@ -26,7 +26,7 @@ from __future__ import annotations
 import base64
 from enum import StrEnum
 from functools import lru_cache
-from typing import Annotated, Self
+from typing import Annotated, Literal, Self
 
 from pydantic import Field, PostgresDsn, RedisDsn, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -136,14 +136,26 @@ class Settings(BaseSettings):
     )
 
     # ── Extraccion ───────────────────────────────────────────────────
-    # Sin clave, la estrategia de vision no se registra y el pipeline
-    # funciona igual con los tres motores gratuitos.
-    anthropic_api_key: str | None = None
+    # Sin credencial del proveedor elegido, la estrategia de vision no se
+    # registra y el pipeline funciona igual con los tres motores gratuitos.
     vision_ai_habilitada: bool = False
+    # Proveedor de vision activo. Groq (modelos abiertos, plan gratuito
+    # generoso) es el que se usa; "anthropic" queda disponible sin tener
+    # que tocar codigo, solo cambiando esta variable.
+    vision_proveedor: Literal["groq", "anthropic"] = "groq"
+
+    # Groq (proveedor por defecto): API compatible con OpenAI.
+    groq_api_key: str | None = None
+    groq_vision_modelo: str = "qwen/qwen3.8-27b"
+    groq_base_url: str = "https://api.groq.com/openai/v1"
+
+    # Anthropic (proveedor alternativo, hoy sin uso).
+    anthropic_api_key: str | None = None
     vision_modelo: str = "claude-opus-5-5"
     # Esfuerzo bajo: transcribir campos de un formulario conocido es
     # una tarea de clasificacion, no de razonamiento.
     vision_esfuerzo: str = "low"
+
     # Tope de llamadas de pago por escaneo. Acota el gasto de un
     # trabajo con cientos de adjuntos ilegibles.
     vision_maximo_llamadas_por_trabajo: Annotated[int, Field(ge=0, le=10_000)] = 50
@@ -283,12 +295,19 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def _exigir_clave_si_la_vision_esta_habilitada(self) -> Self:
         """
-        Habilitar la vision sin credencial dejaria el pipeline
-        degradado en silencio: los documentos ilegibles irian todos a
-        revision humana sin que nadie entendiera por que.
+        Habilitar la vision sin la credencial del proveedor elegido
+        dejaria el pipeline degradado en silencio: los documentos
+        ilegibles irian todos a revision humana sin que nadie entendiera
+        por que. Se exige la clave del proveedor activo, no la del otro.
         """
-        if self.vision_ai_habilitada and not self.anthropic_api_key:
-            raise ValueError("VISION_AI_HABILITADA requiere ANTHROPIC_API_KEY")
+        if not self.vision_ai_habilitada:
+            return self
+        if self.vision_proveedor == "groq" and not self.groq_api_key:
+            raise ValueError("VISION_AI_HABILITADA con VISION_PROVEEDOR=groq requiere GROQ_API_KEY")
+        if self.vision_proveedor == "anthropic" and not self.anthropic_api_key:
+            raise ValueError(
+                "VISION_AI_HABILITADA con VISION_PROVEEDOR=anthropic requiere ANTHROPIC_API_KEY"
+            )
         return self
 
     @model_validator(mode="after")

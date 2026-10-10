@@ -246,7 +246,9 @@ pipeline sigue: la IA es la última estrategia y la más cara.
 
 **Qué hacer.**
 
-1. Comprobar `ANTHROPIC_API_KEY` y la cuota de la cuenta.
+1. Comprobar la credencial del proveedor activo (`VISION_PROVEEDOR`):
+   `GROQ_API_KEY` para Groq (por defecto) o `ANTHROPIC_API_KEY` para
+   Anthropic, y la cuota de esa cuenta.
 2. Revisar el tamaño de las imágenes enviadas: un documento muy grande
    puede exceder el límite de la petición.
 3. `VISION_MAXIMO_LLAMADAS_POR_TRABAJO` acota el gasto por trabajo. Si la

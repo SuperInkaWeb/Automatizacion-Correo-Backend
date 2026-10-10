@@ -42,7 +42,10 @@ dependencies = [
     # y la completa arrastra GTK y medio escritorio sin usarlo.
     "opencv-python-headless==5.0.0.93",
     "pillow==12.3.0",
-    # Vision IA: ultimo recurso del pipeline de extraccion
+    # Vision IA: ultimo recurso del pipeline de extraccion. Groq es el
+    # proveedor activo (API compatible con OpenAI); anthropic queda como
+    # alternativa seleccionable por configuracion.
+    "openai==3.28.0",
     "anthropic==1.11.0",
     # Reportes
     "openpyxl==3.1.5",
