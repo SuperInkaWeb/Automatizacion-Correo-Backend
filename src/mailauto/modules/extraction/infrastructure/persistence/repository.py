@@ -74,6 +74,17 @@ class RepositorioDeRegistrosPostgres(RepositorioDeRegistros):
                 return
             _volcar_en_orm(registro, fila)
 
+    async def eliminar(self, ctx: TenantContext, registro_id: UUID) -> bool:
+        async with self._sesiones.sesion_de_tenant(ctx) as sesion:
+            # Se carga primero para que la RLS confirme que el registro es
+            # del tenant: un DELETE a ciegas por id devolveria lo mismo para
+            # un id ajeno que para uno inexistente, y aqui interesa distinguir.
+            fila = await sesion.get(RegistroTributarioORM, registro_id)
+            if fila is None:
+                return False
+            await sesion.delete(fila)
+            return True
+
     # ── Lectura ──────────────────────────────────────────────────────
 
     async def obtener(self, ctx: TenantContext, registro_id: UUID) -> RegistroTributario | None:

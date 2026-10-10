@@ -39,7 +39,6 @@ import time
 from typing import Any, Final
 
 from mailauto.modules.extraction.domain.entities import (
-    CampoExtraido,
     Estrategia,
     ResultadoDeEstrategia,
 )

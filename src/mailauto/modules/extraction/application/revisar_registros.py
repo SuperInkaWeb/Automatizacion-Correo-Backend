@@ -198,3 +198,23 @@ class RevisarRegistro:
             raise ErrorDeValidacion("No se indico ninguna correccion.")
 
         return resultado
+
+
+class EliminarRegistro:
+    """Borra un registro extraido."""
+
+    def __init__(self, repositorio: RepositorioDeRegistros) -> None:
+        self._repositorio = repositorio
+
+    async def ejecutar(self, ctx: TenantContext, registro_id: UUID) -> None:
+        """
+        Elimina el registro del tenant.
+
+        Exige el mismo permiso que corregir o rechazar: es una accion de
+        quien gestiona los datos, no de solo lectura. Si no existe se
+        levanta un 404 en lugar de callar, para que la interfaz no diga
+        que borro algo que no estaba.
+        """
+        ctx.exigir(Permiso.RECORD_REVIEW)
+        if not await self._repositorio.eliminar(ctx, registro_id):
+            raise RecursoNoEncontrado("El registro no existe.")

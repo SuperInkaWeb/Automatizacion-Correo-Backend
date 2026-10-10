@@ -12,7 +12,10 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from mailauto.modules.extraction.application.revisar_registros import RevisarRegistro
+from mailauto.modules.extraction.application.revisar_registros import (
+    EliminarRegistro,
+    RevisarRegistro,
+)
 from mailauto.modules.extraction.domain.entities import (
     EstadoDeRevision,
     RegistroTributario,
@@ -31,7 +34,11 @@ from mailauto.modules.reporting.infrastructure.generadores import (
     GeneradorCsv,
     GeneradorExcel,
 )
-from mailauto.shared.errors import ErrorDeAutorizacion, ErrorDeValidacion
+from mailauto.shared.errors import (
+    ErrorDeAutorizacion,
+    ErrorDeValidacion,
+    RecursoNoEncontrado,
+)
 from mailauto.shared.pagination import Pagina, SolicitudDePagina
 from mailauto.shared.security.context import TenantContext
 from tests.conftest import TENANT_A
@@ -280,6 +287,12 @@ class RepositorioDeRevisionFalso(RepositorioDeRegistros):
     async def obtener(self, ctx: TenantContext, registro_id: UUID) -> RegistroTributario | None:
         return self.registro
 
+    async def eliminar(self, ctx: TenantContext, registro_id: UUID) -> bool:
+        if self.registro is None:
+            return False
+        self.registro = None
+        return True
+
     async def listar(
         self, ctx: TenantContext, filtros: FiltrosDeRegistro, pagina: SolicitudDePagina
     ) -> Pagina[RegistroTributario]:
@@ -384,6 +397,19 @@ async def test_aprobar_lo_que_no_estaba_en_la_cola_no_lo_altera(
 
     resultado = await RevisarRegistro(repositorio).aprobar_sin_cambios(contexto_a, uuid4())
     assert resultado.estado_de_revision is EstadoDeRevision.NO_REQUERIDA
+
+
+async def test_eliminar_un_registro_existente_lo_borra(contexto_a: TenantContext) -> None:
+    repositorio = RepositorioDeRevisionFalso(_pendiente())
+    await EliminarRegistro(repositorio).ejecutar(contexto_a, uuid4())
+    assert repositorio.registro is None
+
+
+async def test_eliminar_un_registro_inexistente_es_404(contexto_a: TenantContext) -> None:
+    """Borrar lo que no existe no se calla: la interfaz no debe decir que borro algo."""
+    repositorio = RepositorioDeRevisionFalso(None)
+    with pytest.raises(RecursoNoEncontrado):
+        await EliminarRegistro(repositorio).ejecutar(contexto_a, uuid4())
 
 
 def test_los_campos_dudosos_guian_al_revisor() -> None:

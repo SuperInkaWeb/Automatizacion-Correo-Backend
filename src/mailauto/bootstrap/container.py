@@ -47,6 +47,7 @@ from mailauto.modules.extraction.application.extraer_documento import (
 )
 from mailauto.modules.extraction.application.revisar_registros import (
     ConsultarRegistros,
+    EliminarRegistro,
     RevisarRegistro,
 )
 from mailauto.modules.extraction.domain.ports import EstrategiaDeExtraccion
@@ -63,10 +64,14 @@ from mailauto.modules.extraction.infrastructure.strategies.pdf import (
 )
 from mailauto.modules.extraction.infrastructure.strategies.vision import (
     VisionIA,
+)
+from mailauto.modules.extraction.infrastructure.strategies.vision import (
     crear_cliente as crear_cliente_anthropic,
 )
 from mailauto.modules.extraction.infrastructure.strategies.vision_groq import (
     VisionIAGroq,
+)
+from mailauto.modules.extraction.infrastructure.strategies.vision_groq import (
     crear_cliente as crear_cliente_groq,
 )
 from mailauto.modules.identity.application.resolver_identidad import ResolverIdentidad
@@ -165,6 +170,7 @@ class Contenedor:
     extraer_documento: ExtraerDocumento
     consultar_registros: ConsultarRegistros
     revisar_registro: RevisarRegistro
+    eliminar_registro: EliminarRegistro
     solicitar_exportacion: SolicitarExportacion
     consultar_exportacion: ConsultarExportacion
     generar_exportacion: GenerarExportacion
@@ -354,6 +360,7 @@ async def construir_contenedor(settings: Settings) -> Contenedor:
         ),
         consultar_registros=ConsultarRegistros(repo_registros),
         revisar_registro=RevisarRegistro(repo_registros),
+        eliminar_registro=EliminarRegistro(repo_registros),
         solicitar_exportacion=SolicitarExportacion(repo_exportaciones, cola.encolar_exportacion),
         consultar_exportacion=ConsultarExportacion(repo_exportaciones, destino_reportes),
         generar_exportacion=GenerarExportacion(

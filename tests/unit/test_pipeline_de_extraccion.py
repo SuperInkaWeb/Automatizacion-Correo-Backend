@@ -239,6 +239,9 @@ class RepositorioFalso(RepositorioDeRegistros):
     async def obtener(self, ctx: TenantContext, registro_id: UUID) -> RegistroTributario | None:
         return None
 
+    async def eliminar(self, ctx: TenantContext, registro_id: UUID) -> bool:
+        return False
+
     async def listar(
         self, ctx: TenantContext, filtros: FiltrosDeRegistro, pagina: SolicitudDePagina
     ) -> Pagina[RegistroTributario]:

@@ -38,6 +38,7 @@ class AccionAuditada(StrEnum):
     REGISTRO_CORREGIDO = "record.corrected"
     REGISTRO_APROBADO = "record.approved"
     REGISTRO_RECHAZADO = "record.rejected"
+    REGISTRO_ELIMINADO = "record.deleted"
     ADJUNTO_DESCARGADO = "attachment.downloaded"
     DATOS_PURGADOS = "admin.purged"
     ROL_MODIFICADO = "admin.role_changed"

@@ -175,6 +175,10 @@ class RepositorioDeRegistros(ABC):
     async def obtener(self, ctx: TenantContext, registro_id: UUID) -> RegistroTributario | None: ...
 
     @abstractmethod
+    async def eliminar(self, ctx: TenantContext, registro_id: UUID) -> bool:
+        """Borra un registro del tenant. Devuelve False si no existia."""
+
+    @abstractmethod
     async def listar(
         self, ctx: TenantContext, filtros: FiltrosDeRegistro, pagina: SolicitudDePagina
     ) -> Pagina[RegistroTributario]: ...

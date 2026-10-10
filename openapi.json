@@ -2113,6 +2113,73 @@
       }
     },
     "/api/v1/records/{registro_id}": {
+      "delete": {
+        "description": "Borra un registro extraido.\n\nEs irreversible, por eso la interfaz pide confirmacion antes de\nllamar. Devuelve 204 sin cuerpo: no hay nada que mostrar de algo\nque ya no existe.",
+        "operationId": "registros_eliminar_registro",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "registro_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Registro Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-tenant-id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Tenant-Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eliminar Registro",
+        "tags": [
+          "registros"
+        ]
+      },
       "get": {
         "operationId": "registros_obtener_registro",
         "parameters": [

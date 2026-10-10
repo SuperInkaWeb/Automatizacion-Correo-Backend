@@ -106,6 +106,27 @@ async def obtener_registro(
     return Respuesta(data=data[0])
 
 
+@router.delete("/records/{registro_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def eliminar_registro(
+    registro_id: UUID, contexto: ContextoDep, contenedor: ContenedorDep
+) -> Response:
+    """
+    Borra un registro extraido.
+
+    Es irreversible, por eso la interfaz pide confirmacion antes de
+    llamar. Devuelve 204 sin cuerpo: no hay nada que mostrar de algo
+    que ya no existe.
+    """
+    await contenedor.eliminar_registro.ejecutar(contexto, registro_id)
+    await contenedor.auditoria.registrar(
+        contexto,
+        accion=AccionAuditada.REGISTRO_ELIMINADO,
+        tipo_de_recurso="extracted_record",
+        recurso_id=registro_id,
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.get("/records/{registro_id}/document", response_model=Respuesta[DocumentoDeAdjuntoSalida])
 async def ver_documento(
     registro_id: UUID, contexto: ContextoDep, contenedor: ContenedorDep
