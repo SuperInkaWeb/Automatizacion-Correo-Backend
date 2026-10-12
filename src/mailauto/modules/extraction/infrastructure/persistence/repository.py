@@ -24,7 +24,7 @@ from datetime import date
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import func, select, tuple_
+from sqlalchemy import delete, func, select, tuple_
 
 from mailauto.modules.extraction.domain.entities import (
     Completitud,
@@ -84,6 +84,15 @@ class RepositorioDeRegistrosPostgres(RepositorioDeRegistros):
                 return False
             await sesion.delete(fila)
             return True
+
+    async def purgar(self, ctx: TenantContext) -> int:
+        async with self._sesiones.sesion_de_tenant(ctx) as sesion:
+            # Bajo la sesion del tenant la RLS acota tanto el conteo como el
+            # DELETE a sus propias filas, sin WHERE explicito. Se cuenta
+            # antes de borrar para devolver cuantos habia.
+            total = await sesion.scalar(select(func.count()).select_from(RegistroTributarioORM))
+            await sesion.execute(delete(RegistroTributarioORM))
+            return int(total or 0)
 
     # ── Lectura ──────────────────────────────────────────────────────
 

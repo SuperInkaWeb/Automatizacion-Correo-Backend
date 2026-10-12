@@ -122,6 +122,22 @@ class RepositorioFalso(RepositorioDeIngesta):
     ) -> Pagina[ErrorDeProcesamiento]:
         return Pagina(elementos=self.errores)
 
+    async def claves_de_almacenamiento(self, ctx: TenantContext) -> list[str]:
+        return [a.clave_de_almacenamiento for a in self.adjuntos]
+
+    async def purgar_datos_de_escaneo(self, ctx: TenantContext) -> dict[str, int]:
+        conteo = {
+            "errores": len(self.errores),
+            "adjuntos": len(self.adjuntos),
+            "mensajes": len(self.mensajes),
+            "trabajos": 1,
+        }
+        self.errores.clear()
+        self.adjuntos.clear()
+        self.mensajes.clear()
+        self.hashes.clear()
+        return conteo
+
 
 class CredencialesFalsas(ProveedorDeCredenciales):
     def __init__(self, *, revocada: bool = False) -> None:

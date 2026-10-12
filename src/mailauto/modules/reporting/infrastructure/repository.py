@@ -21,7 +21,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import delete, func, select
 
 from mailauto.modules.reporting.domain.ports import (
     EstadoDeExportacion,
@@ -69,6 +69,12 @@ class RepositorioDeExportacionesPostgres(RepositorioDeExportaciones):
                 select(ExportacionORM).where(ExportacionORM.id == exportacion_id)
             )
             return _a_dominio(fila) if fila else None
+
+    async def purgar(self, tenant_id: UUID) -> int:
+        async with self._sesiones.sesion_de_tenant_por_id(tenant_id) as sesion:
+            total = await sesion.scalar(select(func.count()).select_from(ExportacionORM))
+            await sesion.execute(delete(ExportacionORM))
+            return int(total or 0)
 
 
 def _a_dominio(fila: ExportacionORM) -> Exportacion:

@@ -57,6 +57,12 @@ class RepositorioFalso(RepositorioDeExportaciones):
             return None
         return exportacion
 
+    async def purgar(self, tenant_id: UUID) -> int:
+        propias = {i: e for i, e in self.almacenadas.items() if e.tenant_id == tenant_id}
+        for identificador in propias:
+            del self.almacenadas[identificador]
+        return len(propias)
+
 
 class FuenteFalsa(FuenteDeFilas):
     def __init__(self, filas: list[FilaDeReporte], *, revienta: bool = False) -> None:

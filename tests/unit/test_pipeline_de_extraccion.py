@@ -242,6 +242,11 @@ class RepositorioFalso(RepositorioDeRegistros):
     async def eliminar(self, ctx: TenantContext, registro_id: UUID) -> bool:
         return False
 
+    async def purgar(self, ctx: TenantContext) -> int:
+        borrados = len(self.guardados)
+        self.guardados.clear()
+        return borrados
+
     async def listar(
         self, ctx: TenantContext, filtros: FiltrosDeRegistro, pagina: SolicitudDePagina
     ) -> Pagina[RegistroTributario]:

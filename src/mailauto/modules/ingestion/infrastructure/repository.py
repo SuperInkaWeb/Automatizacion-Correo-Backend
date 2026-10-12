@@ -22,7 +22,7 @@ from collections.abc import Callable
 from typing import TypeVar
 from uuid import UUID
 
-from sqlalchemy import func, select, tuple_
+from sqlalchemy import delete, func, select, tuple_
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from mailauto.modules.ingestion.domain.entities import (
@@ -290,6 +290,32 @@ class RepositorioDeIngestaPostgres(RepositorioDeIngesta):
                 )
             filas = list(await sesion.scalars(consulta.limit(pagina.limite + 1)))
             return _paginar(filas, pagina.limite, _a_dominio_error, _cursor_de_fila)
+
+    # ── Reinicio de datos de escaneo ─────────────────────────────────
+
+    async def claves_de_almacenamiento(self, ctx: TenantContext) -> list[str]:
+        async with self._sesiones.sesion_de_tenant(ctx) as sesion:
+            filas = await sesion.scalars(select(AdjuntoORM.clave_de_almacenamiento))
+            return [clave for clave in filas if clave]
+
+    async def purgar_datos_de_escaneo(self, ctx: TenantContext) -> dict[str, int]:
+        async with self._sesiones.sesion_de_tenant(ctx) as sesion:
+            # Orden hijo -> padre por las claves foraneas. Los registros
+            # extraidos (otro modulo) deben borrarse antes de los adjuntos;
+            # de eso se ocupa el caso de uso que orquesta la purga. Aqui
+            # solo se tocan las tablas propias de ingesta, nunca los buzones.
+            # Se cuenta antes de borrar para informar cuantas filas habia.
+            conteo: dict[str, int] = {}
+            for nombre, orm in (
+                ("errores", ErrorDeProcesamientoORM),
+                ("adjuntos", AdjuntoORM),
+                ("mensajes", MensajeDeCorreoORM),
+                ("trabajos", TrabajoDeEscaneoORM),
+            ):
+                total = await sesion.scalar(select(func.count()).select_from(orm))
+                await sesion.execute(delete(orm))
+                conteo[nombre] = int(total or 0)
+            return conteo
 
 
 # ── Mapeo ────────────────────────────────────────────────────────────

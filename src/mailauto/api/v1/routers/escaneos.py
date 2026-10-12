@@ -113,6 +113,29 @@ async def listar(
     )
 
 
+@router.delete("/data", response_model=Respuesta[dict[str, int]])
+async def reiniciar_datos(
+    contexto: ContextoDep, contenedor: ContenedorDep
+) -> Respuesta[dict[str, int]]:
+    """
+    Borra TODOS los datos de escaneo del tenant para poder re-escanear.
+
+    Elimina registros, adjuntos, correos, trabajos, errores y reportes,
+    pero CONSERVA los buzones conectados: no es desvincular la cuenta.
+    Es irreversible, por eso la interfaz pide una confirmacion explicita
+    antes de llamar. Devuelve cuantas filas borro de cada tipo.
+    """
+    resumen = await contenedor.reiniciar_datos_de_escaneo.ejecutar(contexto)
+    await contenedor.auditoria.registrar(
+        contexto,
+        accion=AccionAuditada.DATOS_PURGADOS,
+        tipo_de_recurso="tenant",
+        recurso_id=contexto.tenant_id,
+        metadatos=resumen,
+    )
+    return Respuesta(data=resumen)
+
+
 @router.get("/{trabajo_id}", response_model=Respuesta[EscaneoSalida])
 async def obtener(
     trabajo_id: UUID, contexto: ContextoDep, contenedor: ContenedorDep

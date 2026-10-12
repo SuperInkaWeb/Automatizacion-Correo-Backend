@@ -350,3 +350,17 @@ class RepositorioDeIngesta(ABC):
     async def listar_errores(
         self, ctx: TenantContext, pagina: SolicitudDePagina, trabajo_id: UUID | None = None
     ) -> Pagina[ErrorDeProcesamiento]: ...
+
+    # Reinicio de datos de escaneo
+    @abstractmethod
+    async def claves_de_almacenamiento(self, ctx: TenantContext) -> list[str]:
+        """Claves de los adjuntos del tenant, para borrar sus objetos del almacen."""
+
+    @abstractmethod
+    async def purgar_datos_de_escaneo(self, ctx: TenantContext) -> dict[str, int]:
+        """
+        Borra correos, adjuntos, trabajos y errores del tenant.
+
+        NO toca los buzones conectados: reiniciar el escaneo no es
+        desvincular la cuenta. Devuelve cuantas filas borro de cada tabla.
+        """

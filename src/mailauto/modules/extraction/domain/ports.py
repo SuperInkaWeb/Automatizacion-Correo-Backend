@@ -179,6 +179,10 @@ class RepositorioDeRegistros(ABC):
         """Borra un registro del tenant. Devuelve False si no existia."""
 
     @abstractmethod
+    async def purgar(self, ctx: TenantContext) -> int:
+        """Borra TODOS los registros del tenant. Devuelve cuantos elimino."""
+
+    @abstractmethod
     async def listar(
         self, ctx: TenantContext, filtros: FiltrosDeRegistro, pagina: SolicitudDePagina
     ) -> Pagina[RegistroTributario]: ...

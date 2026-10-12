@@ -39,6 +39,7 @@ from mailauto.bootstrap.adaptadores import (
     AdaptadorDeLecturaDeAdjuntos,
 )
 from mailauto.bootstrap.settings import Settings
+from mailauto.modules.admin.application.reiniciar_datos import ReiniciarDatosDeEscaneo
 from mailauto.modules.audit.domain.ports import RegistroDeAuditoria
 from mailauto.modules.audit.infrastructure.repository import RegistroDeAuditoriaPostgres
 from mailauto.modules.extraction.application.extraer_documento import (
@@ -171,6 +172,7 @@ class Contenedor:
     consultar_registros: ConsultarRegistros
     revisar_registro: RevisarRegistro
     eliminar_registro: EliminarRegistro
+    reiniciar_datos_de_escaneo: ReiniciarDatosDeEscaneo
     solicitar_exportacion: SolicitarExportacion
     consultar_exportacion: ConsultarExportacion
     generar_exportacion: GenerarExportacion
@@ -361,6 +363,12 @@ async def construir_contenedor(settings: Settings) -> Contenedor:
         consultar_registros=ConsultarRegistros(repo_registros),
         revisar_registro=RevisarRegistro(repo_registros),
         eliminar_registro=EliminarRegistro(repo_registros),
+        reiniciar_datos_de_escaneo=ReiniciarDatosDeEscaneo(
+            registros=repo_registros,
+            ingesta=repo_ingesta,
+            exportaciones=repo_exportaciones,
+            almacen=almacen,
+        ),
         solicitar_exportacion=SolicitarExportacion(repo_exportaciones, cola.encolar_exportacion),
         consultar_exportacion=ConsultarExportacion(repo_exportaciones, destino_reportes),
         generar_exportacion=GenerarExportacion(

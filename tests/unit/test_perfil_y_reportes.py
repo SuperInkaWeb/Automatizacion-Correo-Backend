@@ -293,6 +293,11 @@ class RepositorioDeRevisionFalso(RepositorioDeRegistros):
         self.registro = None
         return True
 
+    async def purgar(self, ctx: TenantContext) -> int:
+        borrados = 0 if self.registro is None else 1
+        self.registro = None
+        return borrados
+
     async def listar(
         self, ctx: TenantContext, filtros: FiltrosDeRegistro, pagina: SolicitudDePagina
     ) -> Pagina[RegistroTributario]:

@@ -3064,6 +3064,72 @@
         ]
       }
     },
+    "/api/v1/scans/data": {
+      "delete": {
+        "description": "Borra TODOS los datos de escaneo del tenant para poder re-escanear.\n\nElimina registros, adjuntos, correos, trabajos, errores y reportes,\npero CONSERVA los buzones conectados: no es desvincular la cuenta.\nEs irreversible, por eso la interfaz pide una confirmacion explicita\nantes de llamar. Devuelve cuantas filas borro de cada tipo.",
+        "operationId": "escaneos_reiniciar_datos",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          },
+          {
+            "in": "header",
+            "name": "x-tenant-id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Tenant-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Respuesta_dict_str__int__"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reiniciar Datos",
+        "tags": [
+          "escaneos"
+        ]
+      }
+    },
     "/api/v1/scans/{trabajo_id}": {
       "get": {
         "operationId": "escaneos_obtener",

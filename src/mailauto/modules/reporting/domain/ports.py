@@ -184,3 +184,7 @@ class RepositorioDeExportaciones(ABC):
 
     @abstractmethod
     async def obtener(self, tenant_id: UUID, exportacion_id: UUID) -> Exportacion | None: ...
+
+    @abstractmethod
+    async def purgar(self, tenant_id: UUID) -> int:
+        """Borra todas las exportaciones del tenant. Devuelve cuantas elimino."""
